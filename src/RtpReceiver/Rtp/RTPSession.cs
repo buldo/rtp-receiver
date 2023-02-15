@@ -17,7 +17,7 @@ public class RTPSession : IDisposable
     /// </summary>
     private const uint RTCP_RR_NOSTREAM_SSRC = 4195875351U;
 
-    private static ILogger logger = new NullLogger<RTPSession>();
+    private readonly ILogger _logger;
 
     private RtpSessionConfig rtpSessionConfig;
 
@@ -296,41 +296,12 @@ public class RTPSession : IDisposable
     /// Creates a new RTP session. The synchronisation source and sequence number are initialised to
     /// pseudo random values.
     /// </summary>
-    /// <param name="isRtcpMultiplexed">If true RTCP reports will be multiplexed with RTP on a single channel.
-    /// If false (standard mode) then a separate socket is used to send and receive RTCP reports.</param>
-    /// <param name="isSecure">If true indicated this session is using SRTP to encrypt and authorise
-    /// RTP and RTCP packets. No communications or reporting will commence until the
-    /// is explicitly set as complete.</param>
-    /// <param name="isMediaMultiplexed">If true only a single RTP socket will be used for both audio
-    /// and video (standard case for WebRTC). If false two separate RTP sockets will be used for
-    /// audio and video (standard case for VoIP).</param>
-    /// <param name="bindAddress">Optional. If specified this address will be used as the bind address for any RTP
-    /// and control sockets created. Generally this address does not need to be set. The default behaviour
-    /// is to bind to [::] or 0.0.0.0,d depending on system support, which minimises network routing
-    /// causing connection issues.</param>
-    /// <param name="bindPort">Optional. If specified a single attempt will be made to bind the RTP socket
-    /// on this port. It's recommended to leave this parameter as the default of 0 to let the Operating
-    /// System select the port number.</param>
-    public RTPSession(bool isMediaMultiplexed, bool isRtcpMultiplexed, IPAddress bindAddress = null, int bindPort = 0)
-        : this(new RtpSessionConfig
-        {
-            IsMediaMultiplexed = isMediaMultiplexed,
-            IsRtcpMultiplexed = isRtcpMultiplexed,
-            BindAddress = bindAddress,
-            BindPort = bindPort,
-        })
-    {
-    }
-
-    /// <summary>
-    /// Creates a new RTP session. The synchronisation source and sequence number are initialised to
-    /// pseudo random values.
-    /// </summary>
     /// <param name="config">Contains required settings.</param>
-    public RTPSession(RtpSessionConfig config)
+    public RTPSession(RtpSessionConfig config, ILogger logger)
     {
         rtpSessionConfig = config;
         m_sdpSessionID = Crypto.GetRandomInt(SDP_SESSIONID_LENGTH).ToString();
+        this._logger = logger;
     }
 
 
@@ -373,7 +344,7 @@ public class RTPSession : IDisposable
             str += "] ";
         }
         str += " ]";
-        logger.LogDebug($"LogRemoteSDPSsrcAttributes: {str}");
+        _logger.LogDebug($"LogRemoteSDPSsrcAttributes: {str}");
     }
 
     private void CreateRtcpSession(MediaStream mediaStream)
@@ -397,7 +368,6 @@ public class RTPSession : IDisposable
             {
                 if (mediaStream is VideoStream videoStream)
                 {
-                    videoStream.OnVideoFormatsNegotiatedByIndex += RaisedOnVideoFormatsNegotiated;
                     videoStream.OnVideoFrameReceivedByIndex += RaisedOnOnVideoFrameReceived;
                 }
             }
@@ -425,7 +395,6 @@ public class RTPSession : IDisposable
             {
                 if (mediaStream is VideoStream videoStream)
                 {
-                    videoStream.OnVideoFormatsNegotiatedByIndex -= RaisedOnVideoFormatsNegotiated;
                     videoStream.OnVideoFrameReceivedByIndex -= RaisedOnOnVideoFrameReceived;
                 }
             }
@@ -489,15 +458,6 @@ public class RTPSession : IDisposable
         OnAudioFormatsNegotiatedByIndex?.Invoke(index, audioFormats);
     }
 
-    private void RaisedOnVideoFormatsNegotiated(int index, List<VideoFormat> videoFormats)
-    {
-        if (index == 0)
-        {
-            OnVideoFormatsNegotiated?.Invoke(videoFormats);
-        }
-        OnVideoFormatsNegotiatedByIndex?.Invoke(index, videoFormats);
-    }
-
     private void RaisedOnOnVideoFrameReceived(int index, IPEndPoint ipEndPoint, uint timestamp, byte[] frame, VideoFormat videoFormat)
     {
         if (index == 0)
@@ -532,7 +492,7 @@ public class RTPSession : IDisposable
         }
         else if (index == VideoStreamList.Count)
         {
-            VideoStream videoStream = new VideoStream(rtpSessionConfig, index);
+            VideoStream videoStream = new VideoStream(rtpSessionConfig, index, _logger);
             VideoStreamList.Add(videoStream);
             return videoStream;
         }
@@ -644,7 +604,7 @@ public class RTPSession : IDisposable
         }
         catch (Exception excp)
         {
-            logger.LogError($"Exception in RTPSession SetRemoteDescription. {excp.Message}.");
+            _logger.LogError($"Exception in RTPSession SetRemoteDescription. {excp.Message}.");
             return SetDescriptionResultEnum.Error;
         }
     }
@@ -666,7 +626,7 @@ public class RTPSession : IDisposable
         {
             if (announcement.Port < IPEndPoint.MinPort || announcement.Port > IPEndPoint.MaxPort)
             {
-                logger.LogWarning($"Remote {kind} announcement contained an invalid port number {announcement.Port}.");
+                _logger.LogWarning($"Remote {kind} announcement contained an invalid port number {announcement.Port}.");
 
                 // Set the remote port number to "9" which means ignore and wait for it be set some other way
                 // such as when a remote RTP packet or arrives or ICE negotiation completes.
@@ -926,7 +886,7 @@ public class RTPSession : IDisposable
 
         // If RTCP is multiplexed we don't need a control socket.
         int bindPort = (rtpSessionConfig.BindPort == 0) ? 0 : rtpSessionConfig.BindPort + m_rtpChannelsCount * 2;
-        var rtpChannel = new RTPChannel(!rtpSessionConfig.IsRtcpMultiplexed, rtpSessionConfig.BindAddress, bindPort);
+        var rtpChannel = new RTPChannel(!rtpSessionConfig.IsRtcpMultiplexed, rtpSessionConfig.BindAddress, bindPort, _logger);
 
 
         if (rtpSessionConfig.IsMediaMultiplexed)
@@ -934,7 +894,7 @@ public class RTPSession : IDisposable
             MultiplexRtpChannel = rtpChannel;
         }
 
-        rtpChannel.OnRTPDataReceived += OnReceive;
+        rtpChannel.OnRtpDataReceived += OnReceive;
         rtpChannel.OnControlDataReceived += OnReceive; // RTCP packets could come on RTP or control socket.
         rtpChannel.OnClosed += OnRTPChannelClosed;
 
@@ -1002,7 +962,7 @@ public class RTPSession : IDisposable
                     if (audioStream.HasRtpChannel())
                     {
                         var rtpChannel = audioStream.GetRTPChannel();
-                        rtpChannel.OnRTPDataReceived -= OnReceive;
+                        rtpChannel.OnRtpDataReceived -= OnReceive;
                         rtpChannel.OnControlDataReceived -= OnReceive;
                         rtpChannel.OnClosed -= OnRTPChannelClosed;
                         rtpChannel.Close(reason);
@@ -1020,7 +980,7 @@ public class RTPSession : IDisposable
                     if (videoStream.HasRtpChannel())
                     {
                         var rtpChannel = videoStream.GetRTPChannel();
-                        rtpChannel.OnRTPDataReceived -= OnReceive;
+                        rtpChannel.OnRtpDataReceived -= OnReceive;
                         rtpChannel.OnControlDataReceived -= OnReceive;
                         rtpChannel.OnClosed -= OnRTPChannelClosed;
                         rtpChannel.Close(reason);
@@ -1086,7 +1046,7 @@ public class RTPSession : IDisposable
         MediaStream mediaStream = GetMediaStream(ssrc);
         if (mediaStream == null)
         {
-            logger.LogWarning($"Could not find appropriate remote track for SSRC for RTCP packet - Ssrc:{ssrc}");
+            _logger.LogWarning($"Could not find appropriate remote track for SSRC for RTCP packet - Ssrc:{ssrc}");
         }
 
         var rtcpPkt = new RTCPCompoundPacket(buffer);
@@ -1095,7 +1055,7 @@ public class RTPSession : IDisposable
             mediaStream = GetMediaStream(rtcpPkt);
             if (rtcpPkt.Bye != null)
             {
-                logger.LogDebug($"RTCP BYE received for SSRC {rtcpPkt.Bye.SSRC}, reason {rtcpPkt.Bye.Reason}.");
+                _logger.LogDebug($"RTCP BYE received for SSRC {rtcpPkt.Bye.SSRC}, reason {rtcpPkt.Bye.Reason}.");
 
                 // In some cases, such as a SIP re-INVITE, it's possible the RTP session
                 // will keep going with a new remote SSRC.
@@ -1128,7 +1088,7 @@ public class RTPSession : IDisposable
                              !mediaStream.ControlDestinationEndPoint.Address.Equals(remoteEndPoint.Address) ||
                              mediaStream.ControlDestinationEndPoint.Port != remoteEndPoint.Port))
                         {
-                            logger.LogDebug($"{mediaStream.MediaType} control end point switched from {mediaStream.ControlDestinationEndPoint} to {remoteEndPoint}.");
+                            _logger.LogDebug($"{mediaStream.MediaType} control end point switched from {mediaStream.ControlDestinationEndPoint} to {remoteEndPoint}.");
                             mediaStream.ControlDestinationEndPoint = remoteEndPoint;
                         }
                     }
@@ -1150,7 +1110,7 @@ public class RTPSession : IDisposable
         }
         else
         {
-            logger.LogWarning("Failed to parse RTCP compound report.");
+            _logger.LogWarning("Failed to parse RTCP compound report.");
         }
 
         #endregion
@@ -1171,7 +1131,7 @@ public class RTPSession : IDisposable
 
             if (mediaStream == null)
             {
-                logger.LogWarning($"An RTP packet with SSRC {hdr.SyncSource} and payload ID {hdr.PayloadType} was received that could not be matched to an audio or video stream.");
+                _logger.LogWarning($"An RTP packet with SSRC {hdr.SyncSource} and payload ID {hdr.PayloadType} was received that could not be matched to an audio or video stream.");
                 return;
             }
 

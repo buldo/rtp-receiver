@@ -259,7 +259,7 @@ public class NetServices
     /// tried before giving up. The parameter bindPort is ignored.</param>
     /// <param name="rtpSocket">An output parameter that will contain the allocated RTP socket.</param>
     /// <param name="controlSocket">An output parameter that will contain the allocated control (RTCP) socket.</param>
-    public static void CreateRtpSocket(bool createControlSocket, IPAddress bindAddress, int bindPort, out Socket rtpSocket, out Socket controlSocket)
+    public static void CreateRtpSocket(bool createControlSocket, IPAddress bindAddress, int bindPort, out Socket? rtpSocket, out Socket controlSocket)
     {
         CreateRtpSocket(createControlSocket, ProtocolType.Udp, bindAddress, bindPort, out rtpSocket, out controlSocket);
     }
@@ -281,13 +281,8 @@ public class NetServices
     /// tried before giving up. The parameter bindPort is ignored.</param>
     /// <param name="rtpSocket">An output parameter that will contain the allocated RTP socket.</param>
     /// <param name="controlSocket">An output parameter that will contain the allocated control (RTCP) socket.</param>
-    public static void CreateRtpSocket(bool createControlSocket, ProtocolType protocolType, IPAddress bindAddress, int bindPort, out Socket rtpSocket, out Socket controlSocket)
+    private static void CreateRtpSocket(bool createControlSocket, ProtocolType protocolType, IPAddress bindAddress, int bindPort, out Socket? rtpSocket, out Socket controlSocket)
     {
-        if (bindAddress == null)
-        {
-            bindAddress = (Socket.OSSupportsIPv6 && SupportsDualModeIPv4PacketInfo) ? IPAddress.IPv6Any : IPAddress.Any;
-        }
-
         CheckBindAddressAndThrow(bindAddress);
 
         IPEndPoint bindEP = new IPEndPoint(bindAddress, bindPort);

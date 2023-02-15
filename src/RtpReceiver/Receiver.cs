@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using RtpReceiver.Rtp;
 
 namespace RtpReceiver;
@@ -11,7 +12,7 @@ public class Receiver
     private readonly VideoStream _videoStream;
     private readonly RTPChannel _channel;
 
-    public Receiver(IPEndPoint bindEndPoint)
+    public Receiver(IPEndPoint bindEndPoint, ILogger<Receiver> logger)
     {
         _bindEndPoint = bindEndPoint;
         var sessionConfig = new RtpSessionConfig
@@ -21,11 +22,11 @@ public class Receiver
             IsMediaMultiplexed = false,
             IsRtcpMultiplexed = false
         };
-        _videoStream = new VideoStream(sessionConfig, _nextIndex);
+        _videoStream = new VideoStream(sessionConfig, _nextIndex, logger);
         _videoStream.OnVideoFrameReceivedByIndex += VideoStreamOnOnVideoFrameReceivedByIndex;
-        _channel = new RTPChannel(false, sessionConfig.BindAddress, sessionConfig.BindPort);
+        _channel = new RTPChannel(false, sessionConfig.BindAddress, sessionConfig.BindPort, logger);
         _videoStream.AddRtpChannel(_channel);
-        _channel.OnRTPDataReceived += OnReceiveRTPPacket;
+        _channel.OnRtpDataReceived += OnReceiveRTPPacket;
 
         _nextIndex++;
     }

@@ -30,7 +30,7 @@ public class RtpVideoFramer
         }
     }
 
-    public byte[] GotRtpPacket(RTPPacket rtpPacket)
+    public byte[]? GotRtpPacket(RTPPacket rtpPacket)
     {
         var payload = rtpPacket.Payload;
 

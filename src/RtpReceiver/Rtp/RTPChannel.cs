@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RtpReceiver.Rtp;
 
@@ -12,75 +11,26 @@ namespace RtpReceiver.Rtp;
 /// </summary>
 public class RTPChannel : IDisposable
 {
-    private static ILogger logger = new NullLogger<RTPChannel>();
-    protected UdpReceiver m_rtpReceiver;
-    private Socket m_controlSocket;
-    protected UdpReceiver m_controlReceiver;
-    private bool m_rtpReceiverStarted = false;
-    private bool m_controlReceiverStarted = false;
-    private bool m_isClosed;
-
-    public Socket RtpSocket { get; private set; }
-
-    /// <summary>
-    /// The last remote end point an RTP packet was sent to or received from. Used for
-    /// reporting purposes only.
-    /// </summary>
-    protected IPEndPoint LastRtpDestination { get; set; }
-
-    /// <summary>
-    /// The last remote end point an RTCP packet was sent to or received from. Used for
-    /// reporting purposes only.
-    /// </summary>
-    internal IPEndPoint LastControlDestination { get; private set; }
+    private readonly ILogger _logger;
 
     /// <summary>
     /// The local port we are listening for RTP (and whatever else is multiplexed) packets on.
     /// </summary>
-    public int RTPPort { get; private set; }
-
-    /// <summary>
-    /// The local end point the RTP socket is listening on.
-    /// </summary>
-    public IPEndPoint RTPLocalEndPoint { get; private set; }
+    private readonly int _rtpPort;
 
     /// <summary>
     /// The local port we are listening for RTCP packets on.
     /// </summary>
-    public int ControlPort { get; private set; }
+    private readonly int _controlPort;
 
-    /// <summary>
-    /// The local end point the control socket is listening on.
-    /// </summary>
-    public IPEndPoint ControlLocalEndPoint { get; private set; }
+    private readonly Socket _rtpSocket;
 
-    /// <summary>
-    /// Returns true if the RTP socket supports dual mode IPv4 and IPv6. If the control
-    /// socket exists it will be the same.
-    /// </summary>
-    public bool IsDualMode
-    {
-        get
-        {
-            if (RtpSocket != null && RtpSocket.AddressFamily == AddressFamily.InterNetworkV6)
-            {
-                return RtpSocket.DualMode;
-            }
-            else
-            {
-                return false;
-            }
-        }
-    }
-
-    public bool IsClosed
-    {
-        get { return m_isClosed; }
-    }
-
-    public event Action<int, IPEndPoint, byte[]> OnRTPDataReceived;
-    public event Action<int, IPEndPoint, byte[]> OnControlDataReceived;
-    public event Action<string> OnClosed;
+    private UdpReceiver _rtpReceiver;
+    private readonly Socket _controlSocket;
+    private UdpReceiver _controlReceiver;
+    private bool _rtpReceiverStarted = false;
+    private bool _controlReceiverStarted = false;
+    private bool _isClosed;
 
     /// <summary>
     /// Creates a new RTP channel. The RTP and optionally RTCP sockets will be bound in the constructor.
@@ -92,25 +42,31 @@ public class RTPChannel : IDisposable
     /// the RTP and control sockets to. If left empty then the IPv6 any address will be used if IPv6 is supported
     /// and fallback to the IPv4 any address.</param>
     /// <param name="bindPort">Optional. The specific port to attempt to bind the RTP port on.</param>
-    public RTPChannel(bool createControlSocket, IPAddress bindAddress, int bindPort = 0)
+    public RTPChannel(bool createControlSocket, IPAddress bindAddress, int bindPort, ILogger logger)
     {
-        NetServices.CreateRtpSocket(createControlSocket, bindAddress, bindPort, out var rtpSocket, out m_controlSocket);
+        _logger = logger;
+        NetServices.CreateRtpSocket(createControlSocket, bindAddress, bindPort, out var rtpSocket, out _controlSocket);
 
         if (rtpSocket == null)
         {
             throw new ApplicationException("The RTP channel was not able to create an RTP socket.");
         }
-        else if (createControlSocket && m_controlSocket == null)
+        else if (createControlSocket && _controlSocket == null)
         {
             throw new ApplicationException("The RTP channel was not able to create a Control socket.");
         }
 
-        RtpSocket = rtpSocket;
-        RTPLocalEndPoint = RtpSocket.LocalEndPoint as IPEndPoint;
-        RTPPort = RTPLocalEndPoint.Port;
-        ControlLocalEndPoint = (m_controlSocket != null) ? m_controlSocket.LocalEndPoint as IPEndPoint : null;
-        ControlPort = (m_controlSocket != null) ? ControlLocalEndPoint.Port : 0;
+        _rtpSocket = rtpSocket;
+        var rtpLocalEndPoint = _rtpSocket.LocalEndPoint as IPEndPoint;
+        _rtpPort = rtpLocalEndPoint.Port;
+        var controlLocalEndPoint = (_controlSocket != null) ? _controlSocket.LocalEndPoint as IPEndPoint : null;
+        _controlPort = (_controlSocket != null) ? controlLocalEndPoint.Port : 0;
     }
+
+
+    public event Action<int, IPEndPoint, byte[]> OnRtpDataReceived;
+    public event Action<int, IPEndPoint, byte[]> OnControlDataReceived;
+    public event Action<string> OnClosed;
 
     /// <summary>
     /// Starts listening on the RTP and control ports.
@@ -126,16 +82,16 @@ public class RTPChannel : IDisposable
     /// </summary>
     private void StartRtpReceiver()
     {
-        if (!m_rtpReceiverStarted)
+        if (!_rtpReceiverStarted)
         {
-            m_rtpReceiverStarted = true;
+            _rtpReceiverStarted = true;
 
-            logger.LogDebug($"RTPChannel for {RtpSocket.LocalEndPoint} started.");
+            _logger.LogDebug($"RTPChannel for {_rtpSocket.LocalEndPoint} started.");
 
-            m_rtpReceiver = new UdpReceiver(RtpSocket);
-            m_rtpReceiver.OnPacketReceived += OnRTPPacketReceived;
-            m_rtpReceiver.OnClosed += Close;
-            m_rtpReceiver.BeginReceiveFrom();
+            _rtpReceiver = new UdpReceiver(_rtpSocket);
+            _rtpReceiver.OnPacketReceived += OnRTPPacketReceived;
+            _rtpReceiver.OnClosed += Close;
+            _rtpReceiver.BeginReceiveFrom();
         }
     }
 
@@ -145,14 +101,14 @@ public class RTPChannel : IDisposable
     /// </summary>
     private void StartControlReceiver()
     {
-        if (!m_controlReceiverStarted && m_controlSocket != null)
+        if (!_controlReceiverStarted && _controlSocket != null)
         {
-            m_controlReceiverStarted = true;
+            _controlReceiverStarted = true;
 
-            m_controlReceiver = new UdpReceiver(m_controlSocket);
-            m_controlReceiver.OnPacketReceived += OnControlPacketReceived;
-            m_controlReceiver.OnClosed += Close;
-            m_controlReceiver.BeginReceiveFrom();
+            _controlReceiver = new UdpReceiver(_controlSocket);
+            _controlReceiver.OnPacketReceived += OnControlPacketReceived;
+            _controlReceiver.OnClosed += Close;
+            _controlReceiver.BeginReceiveFrom();
         }
     }
 
@@ -161,30 +117,30 @@ public class RTPChannel : IDisposable
     /// </summary>
     public void Close(string reason)
     {
-        if (!m_isClosed)
+        if (!_isClosed)
         {
             try
             {
                 string closeReason = reason ?? "normal";
 
-                if (m_controlReceiver == null)
+                if (_controlReceiver == null)
                 {
-                    logger.LogDebug($"RTPChannel closing, RTP receiver on port {RTPPort}. Reason: {closeReason}.");
+                    _logger.LogDebug($"RTPChannel closing, RTP receiver on port {_rtpPort}. Reason: {closeReason}.");
                 }
                 else
                 {
-                    logger.LogDebug($"RTPChannel closing, RTP receiver on port {RTPPort}, Control receiver on port {ControlPort}. Reason: {closeReason}.");
+                    _logger.LogDebug($"RTPChannel closing, RTP receiver on port {_rtpPort}, Control receiver on port {_controlPort}. Reason: {closeReason}.");
                 }
 
-                m_isClosed = true;
-                m_rtpReceiver?.Close(null);
-                m_controlReceiver?.Close(null);
+                _isClosed = true;
+                _rtpReceiver?.Close(null);
+                _controlReceiver?.Close(null);
 
                 OnClosed?.Invoke(closeReason);
             }
             catch (Exception excp)
             {
-                logger.LogError("Exception RTPChannel.Close. " + excp);
+                _logger.LogError("Exception RTPChannel.Close. " + excp);
             }
         }
     }
@@ -200,8 +156,7 @@ public class RTPChannel : IDisposable
     {
         if (packet?.Length > 0)
         {
-            LastRtpDestination = remoteEndPoint;
-            OnRTPDataReceived?.Invoke(localPort, remoteEndPoint, packet);
+            OnRtpDataReceived?.Invoke(localPort, remoteEndPoint, packet);
         }
     }
 
@@ -214,7 +169,6 @@ public class RTPChannel : IDisposable
     /// <param name="packet">The raw packet received which should always be an RTCP packet.</param>
     private void OnControlPacketReceived(UdpReceiver receiver, int localPort, IPEndPoint remoteEndPoint, byte[] packet)
     {
-        LastControlDestination = remoteEndPoint;
         OnControlDataReceived?.Invoke(localPort, remoteEndPoint, packet);
     }
 

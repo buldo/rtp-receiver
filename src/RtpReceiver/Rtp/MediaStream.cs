@@ -127,7 +127,7 @@ public class MediaStream
     /// <summary>
     /// The remote video track. Will be null if the remote party is not sending this media
     /// </summary>
-    public MediaStreamTrack RemoteTrack { get; set; }
+    public MediaStreamTrack? RemoteTrack { get; set; }
 
     /// <summary>
     /// The reporting session for this media stream.
@@ -176,7 +176,7 @@ public class MediaStream
 
     public void OnReceiveRTPPacket(RTPHeader hdr, int localPort, IPEndPoint remoteEndPoint, byte[] buffer, VideoStream videoStream = null)
     {
-        RTPPacket rtpPacket = null;
+        RTPPacket? rtpPacket = null;
         if (RemoteRtpEventPayloadID != 0 && hdr.PayloadType == RemoteRtpEventPayloadID)
         {
             if (!EnsureBufferUnprotected(buffer, hdr, out rtpPacket))

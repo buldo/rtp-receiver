@@ -1,20 +1,23 @@
 ﻿using System.Net;
-using System.Net.NetworkInformation;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RtpReceiver.Rtp;
 
 public class VideoStream : MediaStream
 {
-    protected static ILogger logger = new NullLogger<VideoStream>();
+    private readonly ILogger _logger;
 
-    protected RtpVideoFramer RtpVideoFramer;
+    private RtpVideoFramer? _rtpVideoFramer;
 
-    /// <summary>
-    /// Gets fired when the remote SDP is received and the set of common video formats is set.
-    /// </summary>
-    public event Action<int, List<VideoFormat>> OnVideoFormatsNegotiatedByIndex;
+    public VideoStream(
+        RtpSessionConfig config,
+        int index,
+        ILogger logger)
+        : base(config, index)
+    {
+        _logger = logger;
+        MediaType = SDPMediaTypesEnum.video;
+    }
 
     /// <summary>
     /// Gets fired when a full video frame is reconstructed from one or more RTP packets
@@ -26,18 +29,12 @@ public class VideoStream : MediaStream
     ///  - The encoded video frame payload.
     ///  - The video format of the encoded frame.
     /// </remarks>
-    public event Action<int, IPEndPoint, uint, byte[], VideoFormat> OnVideoFrameReceivedByIndex;
+    public event Action<int, IPEndPoint, uint, byte[], VideoFormat>? OnVideoFrameReceivedByIndex;
 
     /// <summary>
     /// Indicates whether this session is using video.
     /// </summary>
-    public bool HasVideo
-    {
-        get
-        {
-            return RemoteTrack != null && RemoteTrack.StreamStatus != MediaStreamStatusEnum.Inactive;
-        }
-    }
+    public bool HasVideo => RemoteTrack != null && RemoteTrack.StreamStatus != MediaStreamStatusEnum.Inactive;
 
     /// <summary>
     /// Indicates the maximum frame size that can be reconstructed from RTP packets during the depacketisation
@@ -52,9 +49,9 @@ public class VideoStream : MediaStream
             return;
         }
 
-        if (RtpVideoFramer != null)
+        if (_rtpVideoFramer != null)
         {
-            var frame = RtpVideoFramer.GotRtpPacket(packet);
+            var frame = _rtpVideoFramer.GotRtpPacket(packet);
             if (frame != null)
             {
                 OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame, format.ToVideoFormat());
@@ -65,11 +62,11 @@ public class VideoStream : MediaStream
             if (format.ToVideoFormat().Codec == VideoCodecsEnum.VP8 ||
                 format.ToVideoFormat().Codec == VideoCodecsEnum.H264)
             {
-                logger.LogDebug($"Video depacketisation codec set to {format.ToVideoFormat().Codec} for SSRC {packet.Header.SyncSource}.");
+                _logger.LogDebug("Video depacketisation codec set to {Codec} for SSRC {SyncSource}.", format.ToVideoFormat().Codec, packet.Header.SyncSource);
 
-                RtpVideoFramer = new RtpVideoFramer(format.ToVideoFormat().Codec, MaxReconstructedVideoFrameSize);
+                _rtpVideoFramer = new RtpVideoFramer(format.ToVideoFormat().Codec, MaxReconstructedVideoFrameSize);
 
-                var frame = RtpVideoFramer.GotRtpPacket(packet);
+                var frame = _rtpVideoFramer.GotRtpPacket(packet);
                 if (frame != null)
                 {
                     OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame, format.ToVideoFormat());
@@ -77,13 +74,10 @@ public class VideoStream : MediaStream
             }
             else
             {
-                logger.LogWarning($"Video depacketisation logic for codec {format.Name()} has not been implemented, PR's welcome!");
+                _logger.LogWarning("Video depacketisation logic for codec {formatName} has not been implemented, PR's welcome!", format.Name());
             }
         }
     }
 
-    public VideoStream(RtpSessionConfig config, int index) : base(config, index)
-    {
-        MediaType = SDPMediaTypesEnum.video;
-    }
+
 }
