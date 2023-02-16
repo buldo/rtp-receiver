@@ -21,15 +21,4 @@ public class MediaStreamTrack
     ///  a=extmap - Mapping for RTP header extensions
     /// </summary>
     public Dictionary<int, RTPHeaderExtension> HeaderExtensions { get; }
-
-    /// <summary>
-    /// Creates a lightweight class to track a media stream track within an RTP session
-    /// When supporting RFC3550 (the standard RTP specification) the relationship between
-    /// an RTP stream and session is 1:1. For WebRTC and RFC8101 there can be multiple
-    /// streams per session.
-    /// </summary>
-    public MediaStreamTrack(Dictionary<int, RTPHeaderExtension>? headerExtensions = null)
-    {
-        HeaderExtensions = headerExtensions ?? new Dictionary<int, RTPHeaderExtension>();
-    }
 }
