@@ -2,81 +2,35 @@
 
 public struct VideoFormat
 {
-    public const int DYNAMIC_ID_MIN = 96;
-    public const int DYNAMIC_ID_MAX = 127;
-    public const int DEFAULT_CLOCK_RATE = 90000;
+    private const int DynamicIdMax = 127;
+    private const int DefaultClockRate = 90000;
 
-    public static readonly VideoFormat Empty = new VideoFormat()
-        { _isNonEmpty = false, ClockRate = DEFAULT_CLOCK_RATE };
-
-    public VideoCodecsEnum Codec { get; set; }
-
-    /// <summary>
-    /// The format ID for the codec. If this is a well known codec it should be set to the
-    /// value from the codec enum. If the codec is a dynamic it must be set between 96–127
-    /// inclusive.
-    /// </summary>
-    public int FormatID { get; set; }
-
-    /// <summary>
-    /// The official name for the codec. This field is critical for dynamic codecs
-    /// where it is used to match the codecs in the SDP offer/answer.
-    /// </summary>
-    public string FormatName { get; set; }
-
-    /// <summary>
-    /// The rate used by decoded samples for this video format.
-    /// </summary>
-    /// <remarks>
-    /// Example, 90000 is the clock rate:
-    /// a=rtpmap:102 H264/90000
-    /// </remarks>
-    public int ClockRate { get; set; }
-
-    /// <summary>
-    /// This is the "a=fmtp" format parameter that will be set in the SDP offer/answer.
-    /// This field should be set WITHOUT the "a=fmtp:0" prefix.
-    /// </summary>
-    /// <remarks>
-    /// Example:
-    /// a=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
-    /// </remarks>
-    public string Parameters { get; set; }
-
-    private bool _isNonEmpty;
-
-    /// <summary>
-    /// Creates a new video format based on a well known SDP format.
-    /// </summary>
-    public VideoFormat(SDPWellKnownMediaFormatsEnum wellKnown) :
-        this(AudioVideoWellKnown.WellKnownVideoFormats[wellKnown])
-    { }
+    public static readonly VideoFormat Empty = new()
+    {
+        ClockRate = DefaultClockRate
+    };
 
     /// <summary>
     /// Creates a new video format based on a well known codec.
     /// </summary>
-    public VideoFormat(VideoCodecsEnum codec, int formatID, int clockRate = DEFAULT_CLOCK_RATE, string parameters = null)
+    public VideoFormat(VideoCodecsEnum codec, int formatID, int clockRate = DefaultClockRate, string parameters = null)
         : this(formatID, codec.ToString(), clockRate, parameters)
-    { }
-
-    public VideoFormat(VideoFormat format)
-        : this(format.FormatID, format.FormatName, format.ClockRate, format.Parameters)
     { }
 
     /// <summary>
     /// Creates a new video format based on a dynamic codec (or an unsupported well known codec).
     /// </summary>
-    public VideoFormat(int formatID, string formatName, int clockRate = DEFAULT_CLOCK_RATE, string parameters = null)
+    public VideoFormat(int formatId, string formatName, int clockRate = DefaultClockRate, string parameters = null)
     {
-        if (formatID < 0)
+        if (formatId < 0)
         {
             // Note format ID's less than the dynamic start range are allowed as the codec list
             // does not currently support all well known codecs.
             throw new ApplicationException("The format ID for an VideoFormat must be greater than 0.");
         }
-        else if (formatID > DYNAMIC_ID_MAX)
+        else if (formatId > DynamicIdMax)
         {
-            throw new ApplicationException($"The format ID for an VideoFormat exceeded the maximum allowed vale of {DYNAMIC_ID_MAX}.");
+            throw new ApplicationException($"The format ID for an VideoFormat exceeded the maximum allowed vale of {DynamicIdMax}.");
         }
         else if (string.IsNullOrWhiteSpace(formatName))
         {
@@ -87,11 +41,10 @@ public struct VideoFormat
             throw new ApplicationException($"The clock rate for a VideoFormat must be greater than 0.");
         }
 
-        FormatID = formatID;
+        FormatId = formatId;
         FormatName = formatName;
         ClockRate = clockRate;
         Parameters = parameters;
-        _isNonEmpty = true;
 
         if (Enum.TryParse<VideoCodecsEnum>(FormatName, out var videoCodec))
         {
@@ -103,5 +56,37 @@ public struct VideoFormat
         }
     }
 
-    public bool IsEmpty() => !_isNonEmpty;
+    public VideoCodecsEnum Codec { get; }
+
+    /// <summary>
+    /// The format ID for the codec. If this is a well known codec it should be set to the
+    /// value from the codec enum. If the codec is a dynamic it must be set between 96–127
+    /// inclusive.
+    /// </summary>
+    public int FormatId { get; }
+
+    /// <summary>
+    /// The official name for the codec. This field is critical for dynamic codecs
+    /// where it is used to match the codecs in the SDP offer/answer.
+    /// </summary>
+    public string FormatName { get; }
+
+    /// <summary>
+    /// The rate used by decoded samples for this video format.
+    /// </summary>
+    /// <remarks>
+    /// Example, 90000 is the clock rate:
+    /// a=rtpmap:102 H264/90000
+    /// </remarks>
+    public int ClockRate { get; private init; }
+
+    /// <summary>
+    /// This is the "a=fmtp" format parameter that will be set in the SDP offer/answer.
+    /// This field should be set WITHOUT the "a=fmtp:0" prefix.
+    /// </summary>
+    /// <remarks>
+    /// Example:
+    /// a=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
+    /// </remarks>
+    public string Parameters { get; }
 }

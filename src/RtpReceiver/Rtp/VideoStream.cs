@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RtpReceiver.Rtp;
 
@@ -117,7 +116,7 @@ public class VideoStream
     /// <summary>
     /// Gets fired when an RTCP report is sent. This event is for diagnostics only.
     /// </summary>
-    public event Action<int, SDPMediaTypesEnum, RTCPCompoundPacket> OnSendReportByIndex;
+    public event Action<int, SDPMediaTypesEnum> OnSendReportByIndex;
 
     /// <summary>
     /// Gets fired when an RTP packet is received from a remote party.
@@ -136,7 +135,7 @@ public class VideoStream
     /// <summary>
     /// Gets fired when an RTCP report is received. This event is for diagnostics only.
     /// </summary>
-    public event Action<int, IPEndPoint, SDPMediaTypesEnum, RTCPCompoundPacket> OnReceiveReportByIndex;
+    public event Action<int, IPEndPoint, SDPMediaTypesEnum> OnReceiveReportByIndex;
 
     public event Action<bool> OnIsClosedStateChanged;
 
@@ -200,24 +199,10 @@ public class VideoStream
         return true;
     }
 
-    #region RTP CHANNEL
-
     public void AddRtpChannel(RTPChannel rtpChannel)
     {
         this.rtpChannel = rtpChannel;
     }
-
-    public Boolean HasRtpChannel()
-    {
-        return rtpChannel != null;
-    }
-
-    public RTPChannel GetRTPChannel()
-    {
-        return rtpChannel;
-    }
-
-    #endregion RTP CHANNEL
 
     #region RECEIVE PACKET
 
@@ -303,9 +288,9 @@ public class VideoStream
 
     #region TO RAISE EVENTS FROM INHERITED CLASS
 
-    public void RaiseOnReceiveReportByIndex(IPEndPoint ipEndPoint, RTCPCompoundPacket rtcpPCompoundPacket)
+    public void RaiseOnReceiveReportByIndex(IPEndPoint ipEndPoint)
     {
-        OnReceiveReportByIndex?.Invoke(Index, ipEndPoint, MediaType, rtcpPCompoundPacket);
+        OnReceiveReportByIndex?.Invoke(Index, ipEndPoint, MediaType);
     }
 
     protected void RaiseOnRtpEventByIndex(IPEndPoint ipEndPoint, RTPEvent rtpEvent, RTPHeader rtpHeader)
@@ -324,8 +309,6 @@ public class VideoStream
     }
 
     #endregion TO RAISE EVENTS FROM INHERITED CLASS
-
-    #region PENDING PACKAGES LOGIC
 
     // Submit all previous cached packages to self
     protected virtual void DispatchPendingPackages()
@@ -385,9 +368,7 @@ public class VideoStream
         return false;
     }
 
-    #endregion
-
-    protected void LogIfWrongSeqNumber(string trackType, RTPHeader header, MediaStreamTrack track)
+    private void LogIfWrongSeqNumber(string trackType, RTPHeader header, MediaStreamTrack track)
     {
         if (track.LastRemoteSeqNum != 0 &&
             header.SequenceNumber != (track.LastRemoteSeqNum + 1) &&
@@ -405,7 +386,7 @@ public class VideoStream
     /// <param name="receivedOnEndPoint">The actual remote end point that the RTP packet came from.</param>
     /// <returns>True if remote end point for this media type was the expected one or it was adjusted. False if
     /// the remote end point was deemed to be invalid for this media type.</returns>
-    protected bool AdjustRemoteEndPoint(uint ssrc, IPEndPoint receivedOnEndPoint)
+    private bool AdjustRemoteEndPoint(uint ssrc, IPEndPoint receivedOnEndPoint)
     {
         bool isValidSource = false;
         IPEndPoint expectedEndPoint = DestinationEndPoint;
@@ -452,28 +433,7 @@ public class VideoStream
         return isValidSource;
     }
 
-    /// <summary>
-    /// Sets the remote end points for a media type supported by this RTP session.
-    /// </summary>
-    /// <param name="mediaType">The media type, must be audio or video, to set the remote end point for.</param>
-    /// <param name="rtpEndPoint">The remote end point for RTP packets corresponding to the media type.</param>
-    /// <param name="rtcpEndPoint">The remote end point for RTCP packets corresponding to the media type.</param>
-    public void SetDestination(IPEndPoint rtpEndPoint, IPEndPoint rtcpEndPoint)
-    {
-        DestinationEndPoint = rtpEndPoint;
-        ControlDestinationEndPoint = rtcpEndPoint;
-    }
-
-    /// <summary>
-    /// Attempts to get the highest priority sending format for the remote call party.
-    /// </summary>
-    /// <returns>The first compatible media format found for the specified media type.</returns>
-    public SDPAudioVideoMediaFormat GetSendingFormat()
-    {
-        return RemoteTrack.Capabilities.First();
-    }
-
-    public void ProcessHeaderExtensions(RTPHeader header)
+    private void ProcessHeaderExtensions(RTPHeader header)
     {
         header.GetHeaderExtensions().ToList().ForEach(x =>
         {

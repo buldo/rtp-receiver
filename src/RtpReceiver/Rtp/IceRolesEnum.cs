@@ -6,7 +6,4 @@
 /// </summary>
 public enum IceRolesEnum
 {
-    actpass = 0,
-    passive = 1,
-    active = 2
 }

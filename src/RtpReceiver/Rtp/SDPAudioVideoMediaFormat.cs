@@ -159,7 +159,7 @@ public struct SDPAudioVideoMediaFormat
     public SDPAudioVideoMediaFormat(VideoFormat videoFormat)
     {
         Kind = SDPMediaTypesEnum.video;
-        ID = videoFormat.FormatID;
+        ID = videoFormat.FormatId;
         Rtpmap = null;
         Fmtp = videoFormat.Parameters;
         _isEmpty = false;
