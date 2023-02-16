@@ -22,7 +22,6 @@ public class VideoStream
         RtpSessionConfig = config;
         this.Index = index;
         _logger = logger;
-        MediaType = SDPMediaTypesEnum.video;
     }
 
     /// <summary>
@@ -35,9 +34,9 @@ public class VideoStream
     ///  - The encoded video frame payload.
     ///  - The video format of the encoded frame.
     /// </remarks>
-    public event Action<int, IPEndPoint, uint, byte[], VideoFormat>? OnVideoFrameReceivedByIndex;
+    public event Action<int, IPEndPoint, uint, byte[]>? OnVideoFrameReceivedByIndex;
 
-    private void ProcessVideoRtpFrame(IPEndPoint endpoint, RTPPacket packet, SDPAudioVideoMediaFormat format)
+    private void ProcessVideoRtpFrame(IPEndPoint endpoint, RTPPacket packet, VideoCodecsEnum codec)
     {
         if (OnVideoFrameReceivedByIndex == null)
         {
@@ -49,40 +48,38 @@ public class VideoStream
             var frame = _rtpVideoFramer.GotRtpPacket(packet);
             if (frame != null)
             {
-                OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame, format.ToVideoFormat());
+                OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame);
             }
         }
         else
         {
-            if (format.ToVideoFormat().Codec == VideoCodecsEnum.VP8 ||
-                format.ToVideoFormat().Codec == VideoCodecsEnum.H264)
+            if (codec == VideoCodecsEnum.VP8 ||
+                codec == VideoCodecsEnum.H264)
             {
-                _logger.LogDebug("Video depacketisation codec set to {Codec} for SSRC {SyncSource}.", format.ToVideoFormat().Codec, packet.Header.SyncSource);
+                _logger.LogDebug("Video depacketisation codec set to {Codec} for SSRC {SyncSource}.", codec, packet.Header.SyncSource);
 
-                _rtpVideoFramer = new RtpVideoFramer(format.ToVideoFormat().Codec, _maxReconstructedVideoFrameSize);
+                _rtpVideoFramer = new RtpVideoFramer(codec, _maxReconstructedVideoFrameSize);
 
                 var frame = _rtpVideoFramer.GotRtpPacket(packet);
                 if (frame != null)
                 {
-                    OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame, format.ToVideoFormat());
+                    OnVideoFrameReceivedByIndex?.Invoke(Index, endpoint, packet.Header.Timestamp, frame);
                 }
             }
             else
             {
-                _logger.LogWarning("Video depacketisation logic for codec {formatName} has not been implemented, PR's welcome!", format.Name());
+                _logger.LogWarning("Video depacketisation logic for codec {codec} has not been implemented, PR's welcome!", codec);
             }
         }
     }
 
-    protected internal class PendingPackages
+    protected class PendingPackages
     {
         public RTPHeader hdr;
         public int localPort;
         public IPEndPoint remoteEndPoint;
         public byte[] buffer;
         public VideoStream videoStream;
-
-        public PendingPackages() { }
 
         public PendingPackages(RTPHeader hdr, int localPort, IPEndPoint remoteEndPoint, byte[] buffer, VideoStream videoStream)
         {
@@ -111,12 +108,12 @@ public class VideoStream
     /// Fires when the connection for a media type is classified as timed out due to not
     /// receiving any RTP or RTCP packets within the given period.
     /// </summary>
-    public event Action<int, SDPMediaTypesEnum> OnTimeoutByIndex;
+    public event Action<int> OnTimeoutByIndex;
 
     /// <summary>
     /// Gets fired when an RTCP report is sent. This event is for diagnostics only.
     /// </summary>
-    public event Action<int, SDPMediaTypesEnum> OnSendReportByIndex;
+    public event Action<int> OnSendReportByIndex;
 
     /// <summary>
     /// Gets fired when an RTP packet is received from a remote party.
@@ -125,7 +122,7 @@ public class VideoStream
     ///  - The media type the packet contains, will be audio or video,
     ///  - The full RTP packet.
     /// </summary>
-    public event Action<int, IPEndPoint, SDPMediaTypesEnum, RTPPacket> OnRtpPacketReceivedByIndex;
+    public event Action<int, IPEndPoint, RTPPacket> OnRtpPacketReceivedByIndex;
 
     /// <summary>
     /// Gets fired when an RTP event is detected on the remote call party's RTP stream.
@@ -135,7 +132,7 @@ public class VideoStream
     /// <summary>
     /// Gets fired when an RTCP report is received. This event is for diagnostics only.
     /// </summary>
-    public event Action<int, IPEndPoint, SDPMediaTypesEnum> OnReceiveReportByIndex;
+    public event Action<int, IPEndPoint> OnReceiveReportByIndex;
 
     public event Action<bool> OnIsClosedStateChanged;
 
@@ -169,11 +166,6 @@ public class VideoStream
             OnIsClosedStateChanged?.Invoke(_isClosed);
         }
     }
-
-    /// <summary>
-    /// To type of this media
-    /// </summary>
-    public SDPMediaTypesEnum MediaType { get; set; }
 
     /// <summary>
     /// The remote video track. Will be null if the remote party is not sending this media
@@ -230,7 +222,7 @@ public class VideoStream
 
             if (isValidSource)
             {
-                _logger.LogDebug($"Set remote track ({MediaType} - index={Index}) SSRC to {hdr.SyncSource}.");
+                _logger.LogDebug($"Set remote track (index={Index}) SSRC to {hdr.SyncSource}.");
                 RemoteTrack.Ssrc = hdr.SyncSource;
             }
         }
@@ -254,7 +246,7 @@ public class VideoStream
         rtpPacket = null;
         if (RemoteTrack != null)
         {
-            LogIfWrongSeqNumber($"{MediaType}", hdr, RemoteTrack);
+            LogIfWrongSeqNumber($"", hdr, RemoteTrack);
             ProcessHeaderExtensions(hdr);
         }
         if (!EnsureBufferUnprotected(buffer, hdr, out rtpPacket))
@@ -265,47 +257,30 @@ public class VideoStream
         // When receiving an Payload from other peer, it will be related to our LocalDescription,
         // not to RemoteDescription (as proved by Azure WebRTC Implementation)
         // TODO: Buldo
-        var format = GetFormatForPayloadID(hdr.PayloadType);
+        var codec = GetFormatForPayloadID(hdr.PayloadType);
         if (rtpPacket != null)
         {
-            videoStream?.ProcessVideoRtpFrame(remoteEndPoint, rtpPacket, format.Value);
+            videoStream?.ProcessVideoRtpFrame(remoteEndPoint, rtpPacket, codec.Value);
             RaiseOnRtpPacketReceivedByIndex(remoteEndPoint, rtpPacket);
         }
     }
-
-    private SDPAudioVideoMediaFormat? GetFormatForPayloadID(int hdrPayloadType)
+    private VideoCodecsEnum? GetFormatForPayloadID(int hdrPayloadType)
     {
         if (hdrPayloadType == 97)
         {
-            return new SDPAudioVideoMediaFormat(new VideoFormat(VideoCodecsEnum.H264, 97));
+            return VideoCodecsEnum.H264;
         }
 
         return null;
     }
 
-
     #endregion RECEIVE PACKET
 
     #region TO RAISE EVENTS FROM INHERITED CLASS
 
-    public void RaiseOnReceiveReportByIndex(IPEndPoint ipEndPoint)
+    private void RaiseOnRtpPacketReceivedByIndex(IPEndPoint ipEndPoint, RTPPacket rtpPacket)
     {
-        OnReceiveReportByIndex?.Invoke(Index, ipEndPoint, MediaType);
-    }
-
-    protected void RaiseOnRtpEventByIndex(IPEndPoint ipEndPoint, RTPEvent rtpEvent, RTPHeader rtpHeader)
-    {
-        OnRtpEventByIndex?.Invoke(Index, ipEndPoint, rtpEvent, rtpHeader);
-    }
-
-    protected void RaiseOnRtpPacketReceivedByIndex(IPEndPoint ipEndPoint, RTPPacket rtpPacket)
-    {
-        OnRtpPacketReceivedByIndex?.Invoke(Index, ipEndPoint, MediaType, rtpPacket);
-    }
-
-    private void RaiseOnTimeoutByIndex(SDPMediaTypesEnum mediaType)
-    {
-        OnTimeoutByIndex?.Invoke(Index, mediaType);
+        OnRtpPacketReceivedByIndex?.Invoke(Index, ipEndPoint, rtpPacket);
     }
 
     #endregion TO RAISE EVENTS FROM INHERITED CLASS
@@ -344,28 +319,6 @@ public class VideoStream
         {
             _pendingPackagesBuffer.Clear();
         }
-    }
-
-    // Cache pending packages to use it later to prevent missing frames
-    // when DTLS was not completed yet as a Server but already completed as a client
-    protected virtual bool AddPendingPackage(RTPHeader hdr, int localPort, IPEndPoint remoteEndPoint, byte[] buffer, VideoStream videoStream = null)
-    {
-        const int MAX_PENDING_PACKAGES_BUFFER_SIZE = 32;
-
-        if (!IsClosed)
-        {
-            lock (_pendingPackagesLock)
-            {
-                //ensure buffer max size
-                while (_pendingPackagesBuffer.Count > 0 && _pendingPackagesBuffer.Count >= MAX_PENDING_PACKAGES_BUFFER_SIZE)
-                {
-                    _pendingPackagesBuffer.RemoveAt(0);
-                }
-                _pendingPackagesBuffer.Add(new PendingPackages(hdr, localPort, remoteEndPoint, buffer, videoStream));
-            }
-            return true;
-        }
-        return false;
     }
 
     private void LogIfWrongSeqNumber(string trackType, RTPHeader header, MediaStreamTrack track)
@@ -411,7 +364,7 @@ public class VideoStream
             // AC 18 Aug 2020: Despite the carefully crafted rules below and https://github.com/sipsorcery/sipsorcery/issues/197
             // there are still cases that were a problem in one scenario but acceptable in another. To accommodate a new property
             // was added to allow the application to decide whether the RTP end point switches should be liberal or not.
-            _logger.LogDebug($"{MediaType} end point switched for RTP ssrc {ssrc} from {expectedEndPoint} to {receivedOnEndPoint}.");
+            _logger.LogDebug($" end point switched for RTP ssrc {ssrc} from {expectedEndPoint} to {receivedOnEndPoint}.");
 
             DestinationEndPoint = receivedOnEndPoint;
             if (RtpSessionConfig.IsRtcpMultiplexed)
@@ -442,7 +395,7 @@ public class VideoStream
                 var ntpTimestamp = x.GetNtpTimestamp(RemoteTrack.HeaderExtensions);
                 if (ntpTimestamp.HasValue)
                 {
-                    RemoteTrack.LastAbsoluteCaptureTimestamp = new TimestampPair() { NtpTimestamp = ntpTimestamp.Value, RtpTimestamp = header.Timestamp };
+                    new TimestampPair() { NtpTimestamp = ntpTimestamp.Value, RtpTimestamp = header.Timestamp };
                 }
             }
         });
