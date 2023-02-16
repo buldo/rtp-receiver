@@ -258,7 +258,7 @@ public class VideoStream
         // not to RemoteDescription (as proved by Azure WebRTC Implementation)
         // TODO: Buldo
         var codec = GetFormatForPayloadID(hdr.PayloadType);
-        if (rtpPacket != null)
+        if (rtpPacket != null && codec != null)
         {
             videoStream?.ProcessVideoRtpFrame(remoteEndPoint, rtpPacket, codec.Value);
             RaiseOnRtpPacketReceivedByIndex(remoteEndPoint, rtpPacket);
@@ -266,7 +266,7 @@ public class VideoStream
     }
     private VideoCodecsEnum? GetFormatForPayloadID(int hdrPayloadType)
     {
-        if (hdrPayloadType == 97)
+        if (hdrPayloadType == 97 || hdrPayloadType == 96)
         {
             return VideoCodecsEnum.H264;
         }

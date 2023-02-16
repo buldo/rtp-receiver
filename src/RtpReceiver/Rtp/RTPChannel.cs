@@ -74,7 +74,7 @@ public class RTPChannel : IDisposable
     public void Start()
     {
         StartRtpReceiver();
-        StartControlReceiver();
+        //StartControlReceiver();
     }
 
     /// <summary>
