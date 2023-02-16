@@ -34,7 +34,6 @@ public class SDPMediaAnnouncement
     public string IcePwd;                   // If ICE is being used the password for the STUN requests.
     public string IceOptions;               // Optional attribute to specify support ICE options, e.g. "trickle".
     public bool IceEndOfCandidates;         // If ICE candidate trickling is being used this needs to be set if all candidates have been gathered.
-    public IceRolesEnum? IceRole = null;
     public string DtlsFingerprint;          // If DTLS handshake is being used this is the fingerprint or our DTLS certificate.
     public int MLineIndex = 0;
 
@@ -232,7 +231,6 @@ public class SDPMediaAnnouncement
         announcement += !string.IsNullOrWhiteSpace(IceUfrag) ? "a=" + SDP.ICE_UFRAG_ATTRIBUTE_PREFIX + ":" + IceUfrag + m_CRLF : null;
         announcement += !string.IsNullOrWhiteSpace(IcePwd) ? "a=" + SDP.ICE_PWD_ATTRIBUTE_PREFIX + ":" + IcePwd + m_CRLF : null;
         announcement += !string.IsNullOrWhiteSpace(DtlsFingerprint) ? "a=" + SDP.DTLS_FINGERPRINT_ATTRIBUTE_PREFIX + ":" + DtlsFingerprint + m_CRLF : null;
-        announcement += IceRole != null ? $"a={SDP.ICE_SETUP_ATTRIBUTE_PREFIX}:{IceRole}{m_CRLF}" : null;
 
         if (IceCandidates?.Count() > 0)
         {

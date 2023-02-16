@@ -59,10 +59,8 @@ public class SDP
     public string URI;                          // URI for additional information about the session.
     public string[] OriginatorEmailAddresses;   // Email addresses for the person responsible for the session.
     public string[] OriginatorPhoneNumbers;     // Phone numbers for the person responsible for the session.
-    public IceImplementationEnum IceImplementation = IceImplementationEnum.full;
     public string IceUfrag;                     // If ICE is being used the username for the STUN requests.
     public string IcePwd;                       // If ICE is being used the password for the STUN requests.
-    public IceRolesEnum? IceRole = null;
     public string DtlsFingerprint;              // If DTLS handshake is being used this is the fingerprint or our DTLS certificate.
     public List<string> IceCandidates;
 
@@ -225,7 +223,6 @@ public class SDP
                             sdp.Group = sdpLineTrimmed.Substring(sdpLineTrimmed.IndexOf(':') + 1);
                             break;
                         case var x when x.StartsWith($"a={ICE_LITE_IMPLEMENTATION_ATTRIBUTE_PREFIX}"):
-                            sdp.IceImplementation = IceImplementationEnum.lite;
                             break;
                         case var x when x.StartsWith($"a={ICE_UFRAG_ATTRIBUTE_PREFIX}"):
                             if (activeAnnouncement != null)
@@ -246,33 +243,6 @@ public class SDP
                             else
                             {
                                 sdp.IcePwd = sdpLineTrimmed.Substring(sdpLineTrimmed.IndexOf(':') + 1);
-                            }
-                            break;
-
-                        case var x when x.StartsWith($"a={ICE_SETUP_ATTRIBUTE_PREFIX}"):
-                            int colonIndex = sdpLineTrimmed.IndexOf(':');
-                            if (colonIndex != -1 && sdpLineTrimmed.Length > colonIndex)
-                            {
-                                string iceRoleStr = sdpLineTrimmed.Substring(colonIndex + 1).Trim();
-                                if (Enum.TryParse<IceRolesEnum>(iceRoleStr, true, out var iceRole))
-                                {
-                                    if (activeAnnouncement != null)
-                                    {
-                                        activeAnnouncement.IceRole = iceRole;
-                                    }
-                                    else
-                                    {
-                                        sdp.IceRole = iceRole;
-                                    }
-                                }
-                                else
-                                {
-                                    logger.LogWarning($"ICE role was not recognised from SDP attribute: {sdpLineTrimmed}.");
-                                }
-                            }
-                            else
-                            {
-                                logger.LogWarning($"ICE role SDP attribute was missing the mandatory colon: {sdpLineTrimmed}.");
                             }
                             break;
 
@@ -711,7 +681,6 @@ public class SDP
 
         sdp += !string.IsNullOrWhiteSpace(IceUfrag) ? "a=" + ICE_UFRAG_ATTRIBUTE_PREFIX + ":" + IceUfrag + CRLF : null;
         sdp += !string.IsNullOrWhiteSpace(IcePwd) ? "a=" + ICE_PWD_ATTRIBUTE_PREFIX + ":" + IcePwd + CRLF : null;
-        sdp += IceRole != null ? $"a={SDP.ICE_SETUP_ATTRIBUTE_PREFIX}:{IceRole}{CRLF}" : null;
         sdp += !string.IsNullOrWhiteSpace(DtlsFingerprint) ? "a=" + DTLS_FINGERPRINT_ATTRIBUTE_PREFIX + ":" + DtlsFingerprint + CRLF : null;
         if (IceCandidates?.Count > 0)
         {
