@@ -7,11 +7,11 @@ public class RtpVideoFramer
 {
     private static ILogger logger = new NullLogger<RtpVideoFramer>();
 
-    private VideoCodecsEnum _codec;
-    private int _maxFrameSize;
-    private byte[] _currVideoFrame;
+    private readonly VideoCodecsEnum _codec;
+    private readonly int _maxFrameSize;
+    private readonly byte[] _currentVideoFrame;
     private int _currVideoFramePosn = 0;
-    private H264Depacketiser _h264Depacketiser;
+    private H264Depacketiser? _h264Depacketiser;
 
     public RtpVideoFramer(VideoCodecsEnum codec, int maxFrameSize)
     {
@@ -22,7 +22,7 @@ public class RtpVideoFramer
 
         _codec = codec;
         _maxFrameSize = maxFrameSize;
-        _currVideoFrame = new byte[maxFrameSize];
+        _currentVideoFrame = new byte[maxFrameSize];
 
         if (_codec == VideoCodecsEnum.H264)
         {
@@ -53,12 +53,12 @@ public class RtpVideoFramer
             {
                 RtpVP8Header vp8Header = RtpVP8Header.GetVP8Header(payload);
 
-                Buffer.BlockCopy(payload, vp8Header.Length, _currVideoFrame, _currVideoFramePosn, payload.Length - vp8Header.Length);
+                Buffer.BlockCopy(payload, vp8Header.Length, _currentVideoFrame, _currVideoFramePosn, payload.Length - vp8Header.Length);
                 _currVideoFramePosn += payload.Length - vp8Header.Length;
 
                 if (rtpPacket.Header.MarkerBit > 0)
                 {
-                    var frame = _currVideoFrame.Take(_currVideoFramePosn).ToArray();
+                    var frame = _currentVideoFrame.Take(_currVideoFramePosn).ToArray();
 
                     _currVideoFramePosn = 0;
 
@@ -76,7 +76,7 @@ public class RtpVideoFramer
             //logger.LogDebug($"rtp H264 video, seqnum {hdr.SequenceNumber}, ts {hdr.Timestamp}, marker {hdr.MarkerBit}, payload {payload.Length}.");
 
             //var hdr = rtpPacket.Header;
-            var frameStream = _h264Depacketiser.ProcessRTPPayload(payload, hdr.SequenceNumber, hdr.Timestamp, hdr.MarkerBit, out bool isKeyFrame);
+            var frameStream = _h264Depacketiser!.ProcessRTPPayload(payload, hdr.SequenceNumber, hdr.Timestamp, hdr.MarkerBit, out bool isKeyFrame);
 
             if (frameStream != null)
             {
@@ -89,58 +89,5 @@ public class RtpVideoFramer
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Utility function to create RtpJpegHeader either for initial packet or template for further packets
-    ///
-    /// <code>
-    /// 0                   1                   2                   3
-    /// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// | Type-specific |              Fragment Offset                  |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// |      Type     |       Q       |     Width     |     Height    |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// </code>
-    /// </summary>
-    /// <param name="fragmentOffset"></param>
-    /// <param name="quality"></param>
-    /// <param name="width"></param>
-    /// <param name="height"></param>
-    /// <returns></returns>
-    public static byte[] CreateLowQualityRtpJpegHeader(uint fragmentOffset, int quality, int width, int height)
-    {
-        byte[] rtpJpegHeader = new byte[8] { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-
-        // Byte 0: Type specific
-        //http://tools.ietf.org/search/rfc2435#section-3.1.1
-
-        // Bytes 1 to 3: Three byte fragment offset
-        //http://tools.ietf.org/search/rfc2435#section-3.1.2
-
-        if (BitConverter.IsLittleEndian)
-        {
-            fragmentOffset = NetConvert.DoReverseEndian(fragmentOffset);
-        }
-
-        byte[] offsetBytes = BitConverter.GetBytes(fragmentOffset);
-        rtpJpegHeader[1] = offsetBytes[2];
-        rtpJpegHeader[2] = offsetBytes[1];
-        rtpJpegHeader[3] = offsetBytes[0];
-
-        // Byte 4: JPEG Type.
-        //http://tools.ietf.org/search/rfc2435#section-3.1.3
-
-        //Byte 5: http://tools.ietf.org/search/rfc2435#section-3.1.4 (Q)
-        rtpJpegHeader[5] = (byte)quality;
-
-        // Byte 6: http://tools.ietf.org/search/rfc2435#section-3.1.5 (Width)
-        rtpJpegHeader[6] = (byte)(width / 8);
-
-        // Byte 7: http://tools.ietf.org/search/rfc2435#section-3.1.6 (Height)
-        rtpJpegHeader[7] = (byte)(height / 8);
-
-        return rtpJpegHeader;
     }
 }

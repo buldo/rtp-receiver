@@ -77,7 +77,7 @@ public class NetServices
     /// even numbered port.</param>
     /// <param name="useDualMode">If true then IPv6 sockets will be created as dual mode IPv4/IPv6 on supporting systems.</param>
     /// <returns>A bound socket if successful or throws an ApplicationException if unable to bind.</returns>
-    public static Socket CreateBoundSocket(int port, IPAddress bindAddress, ProtocolType protocolType, bool requireEvenPort = false, bool useDualMode = true)
+    private static Socket CreateBoundSocket(int port, IPAddress bindAddress, ProtocolType protocolType, bool requireEvenPort = false, bool useDualMode = true)
     {
         if (requireEvenPort && port != 0 && port % 2 != 0)
         {

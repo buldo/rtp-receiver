@@ -20,7 +20,6 @@ public class Receiver
             BindAddress = _bindEndPoint.Address,
             BindPort = _bindEndPoint.Port,
             IsMediaMultiplexed = false,
-            IsRtcpMultiplexed = false
         };
         _videoStream = new VideoStream(sessionConfig, _nextIndex, logger);
         _videoStream.OnVideoFrameReceivedByIndex += VideoStreamOnOnVideoFrameReceivedByIndex;

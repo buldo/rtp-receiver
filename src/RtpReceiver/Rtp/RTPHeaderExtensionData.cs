@@ -8,11 +8,11 @@ public class RTPHeaderExtensionData
         Data = data;
         Type = type;
     }
-    public int Id { get; }
-    public byte[] Data { get; }
-    public RTPHeaderExtensionType Type { get; }
+    private int Id { get; }
+    private byte[] Data { get; }
+    private RTPHeaderExtensionType Type { get; }
 
-    public RTPHeaderExtensionUri.Type? GetUriType(Dictionary<int, RTPHeaderExtension> map)
+    private RTPHeaderExtensionUri.Type? GetUriType(Dictionary<int, RTPHeaderExtension> map)
     {
         return !map.ContainsKey(Id) ? null : map[Id].Type;
     }
@@ -29,7 +29,7 @@ public class RTPHeaderExtensionData
         return GetUlong(0);
     }
 
-    public ulong? GetUlong(int offset)
+    private ulong? GetUlong(int offset)
     {
         if (offset + sizeof(ulong) - 1 >= Data.Length)
         {

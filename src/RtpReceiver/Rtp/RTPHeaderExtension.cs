@@ -7,8 +7,9 @@ public class RTPHeaderExtension
         Id = id;
         Uri = uri;
     }
-    public int Id { get; }
-    public string Uri { get; }
+
+    private int Id { get; }
+    private string Uri { get; }
 
     public RTPHeaderExtensionUri.Type? Type => RTPHeaderExtensionUri.GetType(Uri);
 }

@@ -12,12 +12,6 @@ public sealed class RtpSessionConfig
     public bool IsMediaMultiplexed { get; set; }
 
     /// <summary>
-    /// If true RTCP reports will be multiplexed with RTP on a single channel.
-    /// If false (standard mode) then a separate socket is used to send and receive RTCP reports.
-    /// </summary>
-    public bool IsRtcpMultiplexed { get; set; }
-
-    /// <summary>
     /// Optional. If specified this address will be used as the bind address for any RTP
     /// and control sockets created. Generally this address does not need to be set. The default behaviour
     /// is to bind to [::] or 0.0.0.0,d depending on system support, which minimises network routing

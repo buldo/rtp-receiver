@@ -5,17 +5,6 @@ public class RTPPacket
     public RTPHeader Header;
     public byte[] Payload;
 
-    public RTPPacket()
-    {
-        Header = new RTPHeader();
-    }
-
-    public RTPPacket(int payloadSize)
-    {
-        Header = new RTPHeader();
-        Payload = new byte[payloadSize];
-    }
-
     public RTPPacket(byte[] packet)
     {
         Header = new RTPHeader(packet);

@@ -177,10 +177,6 @@ public class VideoStream
     /// </summary>
     public IPEndPoint DestinationEndPoint { get; set; }
 
-    /// <summary>
-    /// The remote RTP control end point this stream is sending to RTCP reports for the media stream to.
-    /// </summary>
-    public IPEndPoint ControlDestinationEndPoint { get; set; }
 
     #endregion PROPERTIES
 
@@ -195,8 +191,6 @@ public class VideoStream
     {
         this.rtpChannel = rtpChannel;
     }
-
-    #region RECEIVE PACKET
 
     public void OnReceiveRTPPacket(RTPHeader hdr, int localPort, IPEndPoint remoteEndPoint, byte[] buffer, VideoStream videoStream = null)
     {
@@ -274,16 +268,11 @@ public class VideoStream
         return null;
     }
 
-    #endregion RECEIVE PACKET
-
-    #region TO RAISE EVENTS FROM INHERITED CLASS
-
     private void RaiseOnRtpPacketReceivedByIndex(IPEndPoint ipEndPoint, RTPPacket rtpPacket)
     {
         OnRtpPacketReceivedByIndex?.Invoke(Index, ipEndPoint, rtpPacket);
     }
 
-    #endregion TO RAISE EVENTS FROM INHERITED CLASS
 
     // Submit all previous cached packages to self
     protected virtual void DispatchPendingPackages()
@@ -367,14 +356,6 @@ public class VideoStream
             _logger.LogDebug($" end point switched for RTP ssrc {ssrc} from {expectedEndPoint} to {receivedOnEndPoint}.");
 
             DestinationEndPoint = receivedOnEndPoint;
-            if (RtpSessionConfig.IsRtcpMultiplexed)
-            {
-                ControlDestinationEndPoint = DestinationEndPoint;
-            }
-            else
-            {
-                ControlDestinationEndPoint = new IPEndPoint(DestinationEndPoint.Address, DestinationEndPoint.Port + 1);
-            }
 
             isValidSource = true;
         }

@@ -65,7 +65,6 @@ public class RTPChannel : IDisposable
 
 
     public event Action<int, IPEndPoint, byte[]> OnRtpDataReceived;
-    public event Action<int, IPEndPoint, byte[]> OnControlDataReceived;
     public event Action<string> OnClosed;
 
     /// <summary>
@@ -92,23 +91,6 @@ public class RTPChannel : IDisposable
             _rtpReceiver.OnPacketReceived += OnRTPPacketReceived;
             _rtpReceiver.OnClosed += Close;
             _rtpReceiver.BeginReceiveFrom();
-        }
-    }
-
-
-    /// <summary>
-    /// Starts the UDP receiver that listens for RTCP (control) packets.
-    /// </summary>
-    private void StartControlReceiver()
-    {
-        if (!_controlReceiverStarted && _controlSocket != null)
-        {
-            _controlReceiverStarted = true;
-
-            _controlReceiver = new UdpReceiver(_controlSocket);
-            _controlReceiver.OnPacketReceived += OnControlPacketReceived;
-            _controlReceiver.OnClosed += Close;
-            _controlReceiver.BeginReceiveFrom();
         }
     }
 
@@ -158,18 +140,6 @@ public class RTPChannel : IDisposable
         {
             OnRtpDataReceived?.Invoke(localPort, remoteEndPoint, packet);
         }
-    }
-
-    /// <summary>
-    /// Event handler for packets received on the control UDP socket.
-    /// </summary>
-    /// <param name="receiver">The UDP receiver the packet was received on.</param>
-    /// <param name="localPort">The local port it was received on.</param>
-    /// <param name="remoteEndPoint">The remote end point of the sender.</param>
-    /// <param name="packet">The raw packet received which should always be an RTCP packet.</param>
-    private void OnControlPacketReceived(UdpReceiver receiver, int localPort, IPEndPoint remoteEndPoint, byte[] packet)
-    {
-        OnControlDataReceived?.Invoke(localPort, remoteEndPoint, packet);
     }
 
     protected virtual void Dispose(bool disposing)

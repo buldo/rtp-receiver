@@ -25,43 +25,40 @@ public class UdpReceiver
     /// MTU is 1452 bytes so this should be heaps.
     /// TODO: What about fragmented UDP packets that are put back together by the OS?
     /// </summary>
-    protected const int RECEIVE_BUFFER_SIZE = 2048;
+    private const int RECEIVE_BUFFER_SIZE = 2048;
 
-    protected static ILogger logger = new NullLogger<UdpReceiver>();
+    private static ILogger logger = new NullLogger<UdpReceiver>();
 
-    protected readonly Socket m_socket;
-    protected byte[] m_recvBuffer;
-    protected bool m_isClosed;
-    protected bool m_isRunningReceive;
-    protected IPEndPoint m_localEndPoint;
-    protected AddressFamily m_addressFamily;
+    private readonly Socket _socket;
+    private byte[] _recvBuffer;
+    private bool _isClosed;
+    private bool _isRunningReceive;
+    private readonly IPEndPoint _localEndPoint;
+    private readonly AddressFamily _addressFamily;
 
     public virtual bool IsClosed
     {
-        get
-        {
-            return m_isClosed;
-        }
+        get => _isClosed;
         protected set
         {
-            if (m_isClosed == value)
+            if (_isClosed == value)
             {
                 return;
             }
-            m_isClosed = value;
+            _isClosed = value;
         }
     }
 
     public virtual bool IsRunningReceive
     {
-        get => m_isRunningReceive;
+        get => _isRunningReceive;
         protected set
         {
-            if (m_isRunningReceive == value)
+            if (_isRunningReceive == value)
             {
                 return;
             }
-            m_isRunningReceive = value;
+            _isRunningReceive = value;
         }
     }
 
@@ -77,10 +74,10 @@ public class UdpReceiver
 
     public UdpReceiver(Socket socket, int mtu = RECEIVE_BUFFER_SIZE)
     {
-        m_socket = socket;
-        m_localEndPoint = m_socket.LocalEndPoint as IPEndPoint;
-        m_recvBuffer = new byte[mtu];
-        m_addressFamily = m_socket.LocalEndPoint.AddressFamily;
+        _socket = socket;
+        _localEndPoint = _socket.LocalEndPoint as IPEndPoint;
+        _recvBuffer = new byte[mtu];
+        _addressFamily = _socket.LocalEndPoint.AddressFamily;
     }
 
     /// <summary>
@@ -90,20 +87,20 @@ public class UdpReceiver
     public virtual void BeginReceiveFrom()
     {
         //Prevent call BeginReceiveFrom if it is already running
-        if (m_isClosed && m_isRunningReceive)
+        if (_isClosed && _isRunningReceive)
         {
-            m_isRunningReceive = false;
+            _isRunningReceive = false;
         }
-        if (m_isRunningReceive || m_isClosed)
+        if (_isRunningReceive || _isClosed)
         {
             return;
         }
 
         try
         {
-            m_isRunningReceive = true;
-            EndPoint recvEndPoint = m_addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
-            m_socket.BeginReceiveFrom(m_recvBuffer, 0, m_recvBuffer.Length, SocketFlags.None, ref recvEndPoint, EndReceiveFrom, null);
+            _isRunningReceive = true;
+            EndPoint recvEndPoint = _addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
+            _socket.BeginReceiveFrom(_recvBuffer, 0, _recvBuffer.Length, SocketFlags.None, ref recvEndPoint, EndReceiveFrom, null);
         }
         // Thrown when socket is closed. Can be safely ignored.
         // This exception can be thrown in response to an ICMP packet. The problem is the ICMP packet can be a false positive.
@@ -111,22 +108,22 @@ public class UdpReceiver
         // initial RTP packets. Experience has shown that it's not safe to close an RTP connection based solely on ICMP packets.
         catch (ObjectDisposedException)
         {
-            m_isRunningReceive = false;
+            _isRunningReceive = false;
         }
-        catch (SocketException sockExcp)
+        catch (SocketException socketException)
         {
-            m_isRunningReceive = false;
-            logger.LogWarning($"Socket error {sockExcp.SocketErrorCode} in UdpReceiver.BeginReceiveFrom. {sockExcp.Message}");
+            _isRunningReceive = false;
+            logger.LogWarning($"Socket error {socketException.SocketErrorCode} in UdpReceiver.BeginReceiveFrom. {socketException.Message}");
             //Close(sockExcp.Message);
         }
-        catch (Exception excp)
+        catch (Exception exception)
         {
-            m_isRunningReceive = false;
+            _isRunningReceive = false;
             // From https://github.com/dotnet/corefx/blob/e99ec129cfd594d53f4390bf97d1d736cff6f860/src/System.Net.Sockets/src/System/Net/Sockets/Socket.cs#L3262
             // the BeginReceiveFrom will only throw if there is an problem with the arguments or the socket has been disposed of. In that
             // case the socket can be considered to be unusable and there's no point trying another receive.
-            logger.LogError(excp, $"Exception UdpReceiver.BeginReceiveFrom. {excp.Message}");
-            Close(excp.Message);
+            logger.LogError(exception, $"Exception UdpReceiver.BeginReceiveFrom. {exception.Message}");
+            Close(exception.Message);
         }
     }
 
@@ -139,10 +136,10 @@ public class UdpReceiver
         try
         {
             // When socket is closed the object will be disposed of in the middle of a receive.
-            if (!m_isClosed)
+            if (!_isClosed)
             {
-                EndPoint remoteEP = m_addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
-                int bytesRead = m_socket.EndReceiveFrom(ar, ref remoteEP);
+                EndPoint remoteEP = _addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
+                int bytesRead = _socket.EndReceiveFrom(ar, ref remoteEP);
 
                 if (bytesRead > 0)
                 {
@@ -156,8 +153,8 @@ public class UdpReceiver
 
                     byte[] packetBuffer = new byte[bytesRead];
                     // TODO: When .NET Framework support is dropped switch to using a slice instead of a copy.
-                    Buffer.BlockCopy(m_recvBuffer, 0, packetBuffer, 0, bytesRead);
-                    CallOnPacketReceivedCallback(m_localEndPoint.Port, remoteEP as IPEndPoint, packetBuffer);
+                    Buffer.BlockCopy(_recvBuffer, 0, packetBuffer, 0, bytesRead);
+                    CallOnPacketReceivedCallback(_localEndPoint.Port, remoteEP as IPEndPoint, packetBuffer);
                 }
             }
 
@@ -166,19 +163,19 @@ public class UdpReceiver
             // It also avoids the situation where if the application cannot keep up with the network then BeginReceiveFrom
             // will be called synchronously (if data is available it calls the callback method immediately) which can
             // create a very nasty stack.
-            if (!m_isClosed && m_socket.Available > 0)
+            if (!_isClosed && _socket.Available > 0)
             {
-                while (!m_isClosed && m_socket.Available > 0)
+                while (!_isClosed && _socket.Available > 0)
                 {
-                    EndPoint remoteEP = m_addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
-                    int bytesReadSync = m_socket.ReceiveFrom(m_recvBuffer, 0, m_recvBuffer.Length, SocketFlags.None, ref remoteEP);
+                    EndPoint remoteEP = _addressFamily == AddressFamily.InterNetwork ? new IPEndPoint(IPAddress.Any, 0) : new IPEndPoint(IPAddress.IPv6Any, 0);
+                    int bytesReadSync = _socket.ReceiveFrom(_recvBuffer, 0, _recvBuffer.Length, SocketFlags.None, ref remoteEP);
 
                     if (bytesReadSync > 0)
                     {
                         byte[] packetBufferSync = new byte[bytesReadSync];
                         // TODO: When .NET Framework support is dropped switch to using a slice instead of a copy.
-                        Buffer.BlockCopy(m_recvBuffer, 0, packetBufferSync, 0, bytesReadSync);
-                        CallOnPacketReceivedCallback(m_localEndPoint.Port, remoteEP as IPEndPoint, packetBufferSync);
+                        Buffer.BlockCopy(_recvBuffer, 0, packetBufferSync, 0, bytesReadSync);
+                        CallOnPacketReceivedCallback(_localEndPoint.Port, remoteEP as IPEndPoint, packetBufferSync);
                     }
                     else
                     {
@@ -191,7 +188,7 @@ public class UdpReceiver
         {
             // Thrown when close is called on a socket from this end. Safe to ignore.
         }
-        catch (SocketException sockExcp)
+        catch (SocketException socketException)
         {
             // Socket errors do not trigger a close. The reason being that there are genuine situations that can cause them during
             // normal RTP operation. For example:
@@ -202,7 +199,7 @@ public class UdpReceiver
             // in the BeginReceive method (very handy). Follow-up, this doesn't seem to be the case, the socket exception can occur in
             // BeginReceive before any packets have been exchanged. This means it's not safe to close if BeginReceive gets an ICMP
             // error since the remote party may not have initialised their socket yet.
-            logger.LogWarning(sockExcp, $"SocketException UdpReceiver.EndReceiveFrom ({sockExcp.SocketErrorCode}). {sockExcp.Message}");
+            logger.LogWarning(socketException, $"SocketException UdpReceiver.EndReceiveFrom ({socketException.SocketErrorCode}). {socketException.Message}");
         }
         catch (ObjectDisposedException) // Thrown when socket is closed. Can be safely ignored.
         { }
@@ -213,8 +210,8 @@ public class UdpReceiver
         }
         finally
         {
-            m_isRunningReceive = false;
-            if (!m_isClosed)
+            _isRunningReceive = false;
+            if (!_isClosed)
             {
                 BeginReceiveFrom();
             }
@@ -226,10 +223,10 @@ public class UdpReceiver
     /// </summary>
     public virtual void Close(string reason)
     {
-        if (!m_isClosed)
+        if (!_isClosed)
         {
-            m_isClosed = true;
-            m_socket?.Close();
+            _isClosed = true;
+            _socket?.Close();
 
             OnClosed?.Invoke(reason);
         }
