@@ -114,12 +114,6 @@ public class MediaStream
     }
 
     /// <summary>
-    /// In order to detect RTP events from the remote party this property needs to
-    /// be set to the payload ID they are using.
-    /// </summary>
-    public int RemoteRtpEventPayloadID { get; set; } = RTPSession.DEFAULT_DTMF_EVENT_PAYLOAD_ID;
-
-    /// <summary>
     /// To type of this media
     /// </summary>
     public SDPMediaTypesEnum MediaType { get; set; }
@@ -128,11 +122,6 @@ public class MediaStream
     /// The remote video track. Will be null if the remote party is not sending this media
     /// </summary>
     public MediaStreamTrack? RemoteTrack { get; set; }
-
-    /// <summary>
-    /// The reporting session for this media stream.
-    /// </summary>
-    public RTCPSession RtcpSession { get; set; }
 
     /// <summary>
     /// The remote RTP end point this stream is sending media to.
@@ -177,19 +166,19 @@ public class MediaStream
     public void OnReceiveRTPPacket(RTPHeader hdr, int localPort, IPEndPoint remoteEndPoint, byte[] buffer, VideoStream videoStream = null)
     {
         RTPPacket? rtpPacket = null;
-        if (RemoteRtpEventPayloadID != 0 && hdr.PayloadType == RemoteRtpEventPayloadID)
-        {
-            if (!EnsureBufferUnprotected(buffer, hdr, out rtpPacket))
-            {
-                // Cache pending packages to use it later to prevent missing frames
-                // when DTLS was not completed yet as a Server bt already completed as a client
-                AddPendingPackage(hdr, localPort, remoteEndPoint, buffer, videoStream);
-                return;
-            }
+        //if (RemoteRtpEventPayloadID != 0 && hdr.PayloadType == RemoteRtpEventPayloadID)
+        //{
+        //    if (!EnsureBufferUnprotected(buffer, hdr, out rtpPacket))
+        //    {
+        //        // Cache pending packages to use it later to prevent missing frames
+        //        // when DTLS was not completed yet as a Server bt already completed as a client
+        //        AddPendingPackage(hdr, localPort, remoteEndPoint, buffer, videoStream);
+        //        return;
+        //    }
 
-            RaiseOnRtpEventByIndex(remoteEndPoint, new RTPEvent(rtpPacket.Payload), rtpPacket.Header);
-            return;
-        }
+        //    RaiseOnRtpEventByIndex(remoteEndPoint, new RTPEvent(rtpPacket.Payload), rtpPacket.Header);
+        //    return;
+        //}
 
         // Set the remote track SSRC so that RTCP reports can match the media type.
         if (RemoteTrack != null && RemoteTrack.Ssrc == 0 && DestinationEndPoint != null)
@@ -238,8 +227,6 @@ public class MediaStream
         {
             videoStream?.ProcessVideoRtpFrame(remoteEndPoint, rtpPacket, format.Value);
             RaiseOnRtpPacketReceivedByIndex(remoteEndPoint, rtpPacket);
-
-            RtcpSession?.RecordRtpPacketReceived(rtpPacket);
         }
     }
 
@@ -405,24 +392,6 @@ public class MediaStream
         }
 
         return isValidSource;
-    }
-
-    /// <summary>
-    /// Creates a new RTCP session for a media track belonging to this RTP session.
-    /// </summary>
-    /// <param name="mediaType">The media type to create the RTP session for. Must be
-    /// audio or video.</param>
-    /// <returns>A new RTCPSession object. The RTCPSession must have its Start method called
-    /// in order to commence sending RTCP reports.</returns>
-    public Boolean CreateRtcpSession()
-    {
-        if (RtcpSession == null)
-        {
-            RtcpSession = new RTCPSession(MediaType, 0);
-            RtcpSession.OnTimeout += RaiseOnTimeoutByIndex;
-            return true;
-        }
-        return false;
     }
 
     /// <summary>

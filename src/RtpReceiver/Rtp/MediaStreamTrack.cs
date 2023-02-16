@@ -182,38 +182,4 @@ public class MediaStreamTrack
         return RestrictCapabilities(new SDPAudioVideoMediaFormat(videoFormat));
     }
 
-    /// <summary>
-    /// To restrict MediaStream Capabilties to one Audio format. This Audio format must already be present in the previous list or if the list is empty/null
-    ///
-    /// Usefull once you have successfully created a connection with a Peer to use the same format even even others negocitions are performed
-    /// </summary>
-    /// <param name="audioFormat">The Audio Format to restrict</param>
-    /// <returns>True if the operation has been performed</returns>
-    public Boolean RestrictCapabilities(AudioFormat audioFormat)
-    {
-        return RestrictCapabilities(new SDPAudioVideoMediaFormat(audioFormat));
-    }
-
-    /// <summary>
-    /// Returns the next SeqNum to be used in the RTP Sequence Number header field for media packets
-    /// sent using this media stream.
-    /// </summary>
-    /// <returns></returns>
-    public ushort GetNextSeqNum()
-    {
-        var actualSeqNum = m_seqNum;
-        int expectedSeqNum;
-        int attempts = 0;
-        do
-        {
-            if (++attempts > 10)
-            {
-                throw new ApplicationException("GetNextSeqNum did not return an the next SeqNum due to concurrent updates from other threads within 10 attempts.");
-            }
-            expectedSeqNum = actualSeqNum;
-            int nextSeqNum = (actualSeqNum >= UInt16.MaxValue) ? (ushort)0 : (ushort)(actualSeqNum + 1);
-            actualSeqNum = Interlocked.CompareExchange(ref m_seqNum, nextSeqNum, expectedSeqNum);
-        } while (expectedSeqNum != actualSeqNum); // Try as long as compare-exchange was not successful; in most cases, only one iteration should be needed
-        return (ushort)expectedSeqNum;
-    }
 }

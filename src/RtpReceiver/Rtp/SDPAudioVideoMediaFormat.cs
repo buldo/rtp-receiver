@@ -94,23 +94,14 @@ public struct SDPAudioVideoMediaFormat
     /// </summary>
     public SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum knownFormat)
     {
-        Kind = AudioVideoWellKnown.WellKnownAudioFormats.ContainsKey(knownFormat) ? SDPMediaTypesEnum.audio :
-            SDPMediaTypesEnum.video;
+        Kind = SDPMediaTypesEnum.video;
         ID = (int)knownFormat;
         Rtpmap = null;
         Fmtp = null;
         _isEmpty = false;
 
-        if (Kind == SDPMediaTypesEnum.audio)
-        {
-            var audioFormat = AudioVideoWellKnown.WellKnownAudioFormats[knownFormat];
-            Rtpmap = SetRtpmap(audioFormat.FormatName, audioFormat.RtpClockRate, audioFormat.ChannelCount);
-        }
-        else
-        {
-            var videoFormat = AudioVideoWellKnown.WellKnownVideoFormats[knownFormat];
-            Rtpmap = SetRtpmap(videoFormat.FormatName, videoFormat.ClockRate, 0);
-        }
+        var videoFormat = AudioVideoWellKnown.WellKnownVideoFormats[knownFormat];
+        Rtpmap = SetRtpmap(videoFormat.FormatName, videoFormat.ClockRate, 0);
     }
 
     /// <summary>
@@ -160,23 +151,6 @@ public struct SDPAudioVideoMediaFormat
     }
 
     /// <summary>
-    /// Creates a new SDP media format from a Audio Format instance. The Audio Format contains the
-    /// equivalent information to the SDP format object but has well defined audio properties separate
-    /// from the SDP serialisation.
-    /// </summary>
-    /// <param name="audioFormat">The Audio Format to map to an SDP format.</param>
-    public SDPAudioVideoMediaFormat(AudioFormat audioFormat)
-    {
-        Kind = SDPMediaTypesEnum.audio;
-        ID = audioFormat.FormatID;
-        Rtpmap = null;
-        Fmtp = audioFormat.Parameters;
-        _isEmpty = false;
-
-        Rtpmap = SetRtpmap(audioFormat.FormatName, audioFormat.RtpClockRate, audioFormat.ChannelCount);
-    }
-
-    /// <summary>
     /// Creates a new SDP media format from a Video Format instance. The Video Format contains the
     /// equivalent information to the SDP format object but has well defined video properties separate
     /// from the SDP serialisation.
@@ -198,7 +172,7 @@ public struct SDPAudioVideoMediaFormat
             Kind == SDPMediaTypesEnum.video ? $"{name}/{clockRate}" :
             (channels == DEFAULT_AUDIO_CHANNEL_COUNT) ? $"{name}/{clockRate}" : $"{name}/{clockRate}/{channels}";
     public bool IsEmpty() => _isEmpty;
-    public int ClockRate() => Kind == SDPMediaTypesEnum.video ? ToVideoFormat().ClockRate : ToAudioFormat().ClockRate;
+    public int ClockRate() => ToVideoFormat().ClockRate;
     public int Channels() =>
         Kind == SDPMediaTypesEnum.video ? 0 :
         TryParseRtpmap(Rtpmap, out _, out _, out var channels) ? channels : DEFAULT_AUDIO_CHANNEL_COUNT;
@@ -237,39 +211,6 @@ public struct SDPAudioVideoMediaFormat
 
     public SDPAudioVideoMediaFormat WithUpdatedFmtp(string fmtp, SDPAudioVideoMediaFormat format) =>
         new SDPAudioVideoMediaFormat(format.Kind, format.ID, format.Rtpmap, fmtp);
-
-    /// <summary>
-    /// Maps an audio SDP media type to a media abstraction layer audio format.
-    /// </summary>
-    /// <returns>An audio format value.</returns>
-    public AudioFormat ToAudioFormat()
-    {
-        // Rtpmap takes priority over well known media type as ID's can be changed.
-        if (Rtpmap != null && TryParseRtpmap(Rtpmap, out var name, out int rtpClockRate, out int channels))
-        {
-            int clockRate = rtpClockRate;
-
-            // G722 is a special case. It's the only audio format that uses the wrong RTP clock rate.
-            // It sets 8000 in the SDP but then expects samples to be sent as 16KHz.
-            // See https://tools.ietf.org/html/rfc3551#section-4.5.2.
-            if (name == "G722" && rtpClockRate == 8000)
-            {
-                clockRate = 16000;
-            }
-
-            return new AudioFormat(ID, name, clockRate, rtpClockRate, channels, Fmtp);
-        }
-        else if (ID < DYNAMIC_ID_MIN
-                 && Enum.TryParse<SDPWellKnownMediaFormatsEnum>(Name(), out var wellKnownFormat)
-                 && AudioVideoWellKnown.WellKnownAudioFormats.ContainsKey(wellKnownFormat))
-        {
-            return AudioVideoWellKnown.WellKnownAudioFormats[wellKnownFormat];
-        }
-        else
-        {
-            return AudioFormat.Empty;
-        }
-    }
 
     /// <summary>
     /// Maps a video SDP media type to a media abstraction layer video format.
