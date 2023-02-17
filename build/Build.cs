@@ -9,6 +9,7 @@ using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitVersion;
+using Nuke.Common.Tools.MinVer;
 using Nuke.Common.Utilities.Collections;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
@@ -38,8 +39,8 @@ class Build : NukeBuild
     [Solution(GenerateProjects = true)]
     readonly Solution Solution;
 
-    [GitVersion(NoFetch = true)]
-    readonly GitVersion GitVersion;
+    [MinVer]
+    readonly MinVer MinVer;
 
     readonly AbsolutePath OutputPath;
 
@@ -75,7 +76,7 @@ class Build : NukeBuild
                 //.SetNoBuild(true)
                 .SetProject(Solution.RtpReceiver)
                 .SetOutputDirectory(OutputPath)
-                .SetVersion(GitVersion.NuGetVersionV2));
+                .SetVersion(MinVer.PackageVersion));
         });
 
     Target PublishToNuget => _ => _
