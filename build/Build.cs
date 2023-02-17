@@ -76,7 +76,8 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetPack(settings => settings
-                //.SetNoBuild(true)
+                .SetConfiguration(Configuration)
+                .SetNoBuild(true)
                 .SetProject(Solution.Bld_RtpReceiver)
                 .SetOutputDirectory(OutputPath)
                 .SetVersion(MinVer.PackageVersion));
