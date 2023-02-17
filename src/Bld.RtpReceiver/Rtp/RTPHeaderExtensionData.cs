@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class RTPHeaderExtensionData
+internal class RTPHeaderExtensionData
 {
     public RTPHeaderExtensionData(int id, byte[] data, RTPHeaderExtensionType type)
     {

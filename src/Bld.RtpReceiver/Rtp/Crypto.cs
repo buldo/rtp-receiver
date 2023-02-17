@@ -2,7 +2,7 @@
 
 namespace Bld.RtpReceiver.Rtp;
 
-public class Crypto
+internal class Crypto
 {
     private static readonly RNGCryptoServiceProvider MRandomProvider = new();
 

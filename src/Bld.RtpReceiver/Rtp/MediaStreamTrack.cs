@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class MediaStreamTrack
+internal class MediaStreamTrack
 {
     /// <summary>
     /// The value used in the RTP Synchronisation Source header field for media packets

@@ -9,7 +9,7 @@ namespace Bld.RtpReceiver.Rtp;
 /// Real-time Control Protocol (RTCP) packets. This class performs the socket management
 /// functions.
 /// </summary>
-public class RTPChannel : IDisposable
+internal class RTPChannel : IDisposable
 {
     private readonly ILogger _logger;
 

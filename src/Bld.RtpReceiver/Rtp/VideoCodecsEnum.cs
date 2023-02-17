@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public enum VideoCodecsEnum
+internal enum VideoCodecsEnum
 {
     CELB,
     JPEG,

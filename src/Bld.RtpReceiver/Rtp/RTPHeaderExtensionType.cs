@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public enum RTPHeaderExtensionType
+internal enum RTPHeaderExtensionType
 {
     OneByte,
     TwoByte

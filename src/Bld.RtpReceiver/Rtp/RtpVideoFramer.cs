@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bld.RtpReceiver.Rtp;
 
-public class RtpVideoFramer
+internal class RtpVideoFramer
 {
     private static ILogger logger = new NullLogger<RtpVideoFramer>();
 

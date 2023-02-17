@@ -2,7 +2,7 @@
 
 namespace Bld.RtpReceiver.Rtp;
 
-public sealed class RtpSessionConfig
+internal sealed class RtpSessionConfig
 {
     /// <summary>
     /// If true only a single RTP socket will be used for both audio

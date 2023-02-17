@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class RTPPacket
+internal class RTPPacket
 {
     public RTPHeader Header;
     public byte[] Payload;

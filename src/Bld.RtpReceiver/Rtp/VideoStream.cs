@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bld.RtpReceiver.Rtp;
 
-public class VideoStream
+internal class VideoStream
 {
     private readonly ILogger _logger;
 

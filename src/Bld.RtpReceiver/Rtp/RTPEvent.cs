@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class RTPEvent
+internal class RTPEvent
 {
     /// <summary>
     /// The ID for the event. For a DTMF tone this is the digit/letter to represent.

@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace Bld.RtpReceiver.Rtp;
 
-public static class TypeExtensions
+internal static class TypeExtensions
 {
     public static bool IsPrivate(this IPAddress address)
     {

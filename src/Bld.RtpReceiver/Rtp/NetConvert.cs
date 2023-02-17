@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class NetConvert
+internal class NetConvert
 {
     public static UInt16 DoReverseEndian(UInt16 x)
     {

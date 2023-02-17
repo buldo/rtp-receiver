@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bld.RtpReceiver.Rtp;
 
-public delegate void PacketReceivedDelegate(UdpReceiver receiver, int localPort, IPEndPoint remoteEndPoint, byte[] packet);
+internal delegate void PacketReceivedDelegate(UdpReceiver receiver, int localPort, IPEndPoint remoteEndPoint, byte[] packet);
 
 /// <summary>
 /// A basic UDP socket manager. The RTP channel may need both an RTP and Control socket. This class encapsulates
@@ -19,7 +19,7 @@ public delegate void PacketReceivedDelegate(UdpReceiver receiver, int localPort,
 /// Mono Socket source:
 /// https://github.com/mono/mono/blob/master/mcs/class/System/System.Net.Sockets/Socket.cs
 /// </remarks>
-public class UdpReceiver
+internal class UdpReceiver
 {
     /// <summary>
     /// MTU is 1452 bytes so this should be heaps.

@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class RTPHeaderExtensionUri
+internal class RTPHeaderExtensionUri
 {
     public enum Type
     {

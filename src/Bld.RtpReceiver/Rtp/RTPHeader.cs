@@ -1,6 +1,6 @@
 ﻿namespace Bld.RtpReceiver.Rtp;
 
-public class RTPHeader
+internal class RTPHeader
 {
     public const int MIN_HEADER_LEN = 12;
 

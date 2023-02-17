@@ -4,7 +4,7 @@
 /// Representation of the VP8 RTP header as specified in RFC7741
 /// https://tools.ietf.org/html/rfc7741.
 /// </summary>
-public class RtpVP8Header
+internal class RtpVP8Header
 {
     // Payload Descriptor Fields.
     public bool ExtendedControlBitsPresent;     // Indicated whether extended control bits are present.

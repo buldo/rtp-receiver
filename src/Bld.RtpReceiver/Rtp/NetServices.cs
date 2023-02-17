@@ -9,7 +9,7 @@ namespace Bld.RtpReceiver.Rtp;
 /// <summary>
 /// Helper class to provide network services.
 /// </summary>
-public class NetServices
+internal class NetServices
 {
     private const int RTP_RECEIVE_BUFFER_SIZE = 1000000;
     private const int RTP_SEND_BUFFER_SIZE = 1000000;
