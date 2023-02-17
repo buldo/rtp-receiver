@@ -23,7 +23,7 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
     InvokedTargets = new[] { nameof(Clean), nameof(PublishToNuget) },
     AutoGenerate = true,
     FetchDepth = 0,
-    ImportSecrets = new[] { "CLOUDSMITH_API_KEY" })]
+    ImportSecrets = new[] { "NUGET_API_KEY" })]
 class Build : NukeBuild
 {
     public static int Main () => Execute<Build>(x => x.Compile);
@@ -35,6 +35,9 @@ class Build : NukeBuild
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
+
+    [Parameter]
+    readonly string NugetApiKey;
 
     [Solution(GenerateProjects = true)]
     readonly Solution Solution;
@@ -83,5 +86,8 @@ class Build : NukeBuild
         .DependsOn(Publish)
         .Executes(() =>
         {
+            DotNetNuGetPush(settings => settings
+                .SetApiKey(NugetApiKey)
+                .SetTargetPath(GlobFiles(OutputPath, "*.nuget").First()));
         });
 }
