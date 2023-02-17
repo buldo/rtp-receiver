@@ -55,7 +55,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetRestore(settings => settings
-                .SetProjectFile(Solution.RtpReceiver));
+                .SetProjectFile(Solution.Bld_RtpReceiver));
         });
 
     Target Compile => _ => _
@@ -64,7 +64,7 @@ class Build : NukeBuild
         {
             DotNetBuild(settings => settings
                 .SetNoRestore(true)
-                .SetProjectFile(Solution.RtpReceiver)
+                .SetProjectFile(Solution.Bld_RtpReceiver)
                 .SetConfiguration(Configuration));
         });
 
@@ -74,7 +74,7 @@ class Build : NukeBuild
         {
             DotNetPack(settings => settings
                 //.SetNoBuild(true)
-                .SetProject(Solution.RtpReceiver)
+                .SetProject(Solution.Bld_RtpReceiver)
                 .SetOutputDirectory(OutputPath)
                 .SetVersion(MinVer.PackageVersion));
         });

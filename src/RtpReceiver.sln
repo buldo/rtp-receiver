@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33402.96
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bld.RtpReceiver", "RtpReceiver\Bld.RtpReceiver.csproj", "{8BEF3142-C4AC-42AF-9845-4619A18C8CC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bld.RtpReceiver", "Bld.RtpReceiver\Bld.RtpReceiver.csproj", "{8BEF3142-C4AC-42AF-9845-4619A18C8CC9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bld.RtpReceiverDemo", "RtpReceiverDemo\Bld.RtpReceiverDemo.csproj", "{0F633AEE-4F6F-473F-9CAD-585E46186D17}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bld.RtpReceiverDemo", "Bld.RtpReceiverDemo\Bld.RtpReceiverDemo.csproj", "{0F633AEE-4F6F-473F-9CAD-585E46186D17}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\build\_build.csproj", "{861F0992-BEC6-4557-8076-C546548C7B83}"
 EndProject
