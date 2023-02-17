@@ -7,6 +7,11 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>Bld.RtpReceiver</PackageId>
     <Title>Rtp video framesa receiver</Title>
+    <Authors>Roman Buldygin</Authors>
+    <Company>bld.zone</Company>
+    <PackageProjectUrl>https://github.com/buldo/rtp-receiver</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/buldo/rtp-receiver</RepositoryUrl>
+    <PackageTags>rtp</PackageTags>
   </PropertyGroup>
 
     <ItemGroup>

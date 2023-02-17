@@ -89,6 +89,7 @@ class Build : NukeBuild
         {
             DotNetNuGetPush(settings => settings
                 .SetApiKey(NugetApiKey)
-                .SetTargetPath(GlobFiles(OutputPath, "*.nupkg").First()));
+                .SetTargetPath(GlobFiles(OutputPath, "*.nupkg").First())
+                .SetSource("https://api.nuget.org/v3/index.json"));
         });
 }
