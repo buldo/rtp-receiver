@@ -89,6 +89,6 @@ class Build : NukeBuild
         {
             DotNetNuGetPush(settings => settings
                 .SetApiKey(NugetApiKey)
-                .SetSource(GlobFiles(OutputPath, "*.nupkg").First()));
+                .SetTargetPath(GlobFiles(OutputPath, "*.nupkg").First()));
         });
 }
