@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RtpReceiver\RtpReceiver.csproj" />
+    <ProjectReference Include="..\RtpReceiver\Bld.RtpReceiver.csproj" />
   </ItemGroup>
 
 </Project>
