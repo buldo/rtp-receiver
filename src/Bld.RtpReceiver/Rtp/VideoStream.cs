@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 
-namespace RtpReceiver.Rtp;
+namespace Bld.RtpReceiver.Rtp;
 
 public class VideoStream
 {

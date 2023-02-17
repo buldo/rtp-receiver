@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace RtpReceiver.Rtp;
+namespace Bld.RtpReceiver.Rtp;
 
 public class Crypto
 {

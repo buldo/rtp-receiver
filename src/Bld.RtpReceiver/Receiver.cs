@@ -1,8 +1,8 @@
 ﻿using System.Net;
+using Bld.RtpReceiver.Rtp;
 using Microsoft.Extensions.Logging;
-using RtpReceiver.Rtp;
 
-namespace RtpReceiver;
+namespace Bld.RtpReceiver;
 
 public class Receiver
 {

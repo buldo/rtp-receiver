@@ -1,4 +1,4 @@
-﻿namespace RtpReceiver.Rtp;
+﻿namespace Bld.RtpReceiver.Rtp;
 
 /// <summary>
 /// Representation of the VP8 RTP header as specified in RFC7741

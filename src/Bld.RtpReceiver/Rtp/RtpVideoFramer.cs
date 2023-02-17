@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace RtpReceiver.Rtp;
+namespace Bld.RtpReceiver.Rtp;
 
 public class RtpVideoFramer
 {

@@ -1,4 +1,4 @@
-﻿namespace RtpReceiver.Rtp;
+﻿namespace Bld.RtpReceiver.Rtp;
 
 public enum RTPHeaderExtensionType
 {

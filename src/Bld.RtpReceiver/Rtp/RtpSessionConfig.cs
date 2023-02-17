@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace RtpReceiver.Rtp;
+namespace Bld.RtpReceiver.Rtp;
 
 public sealed class RtpSessionConfig
 {
